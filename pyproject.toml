@@ -1,0 +1,210 @@
+# FleetWatch API - Monorepo Configuration
+# Single package with all microservices as subpackages
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv]
+package = true
+
+[project]
+name = "softlight-env"
+version = "0.1.0"
+description = "FleetWatch API - Identity and fleet management microservices"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "pydantic[email]>=2.5.0",
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.13.0",
+    "asyncpg>=0.29.0",
+    "psycopg2-binary>=2.9.0",
+    "geoalchemy2>=0.14.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.6",
+    "httpx>=0.25.0",
+    "boto3>=1.34.0",
+    "structlog>=23.2.0",
+    "greenlet>=3.0.0",
+    "pyjwt>=2.8.0",
+    "requests>=2.31.0",
+    "cachetools>=5.0.0",
+    "aiohttp>=3.8.0",
+    "click>=8.0.0",
+    "python-dotenv>=1.0.0",
+    "modal>=1.1.1",
+    "loguru>=0.7.3",
+    "logfire>=4.3.3",
+    "neon-client>=0.1.0",
+
+    # 🔒 Pins to avoid resolver backtracking to compile-only combos
+    "ibis-framework[postgres,snowflake]==10.8.0",
+    "snowflake-connector-python==3.17.3",
+    "pyarrow==21.0.0",
+    "pandas==2.3.2",
+    "numpy==2.3.3",
+
+    # Your new lib, pinned to avoid re-resolve churn
+    "transitions==0.9.3",
+
+    "psycopg[binary]>=3.2.7",
+    "python-statemachine>=2.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+]
+infrastructure = [
+    "aws-cdk-lib>=2.100.0",
+    "constructs>=10.0.0",
+    "aws-cdk.aws-apigatewayv2-alpha>=2.100.0a0",
+    "aws-cdk.aws-apigatewayv2-integrations-alpha>=2.100.0a0",
+    "aws-cdk.aws-apigatewayv2-authorizers-alpha>=2.100.0a0",
+]
+
+[tool.setuptools.packages.find]
+include = ["services*", "shared*", "conexio*", "migrations*"]
+
+[tool.setuptools.package-data]
+"services.dlm.app.constants" = ["*.json"]
+
+[project.scripts]
+# Identity Service - Development
+identity-dev = "services.identity.scripts:dev"
+identity-dev-debug = "services.identity.scripts:dev_debug"
+
+# Identity Service - Testing
+identity-test = "services.identity.scripts:test"
+identity-test-cov = "services.identity.scripts:test_cov"
+
+# Identity Service - Code quality
+identity-lint = "services.identity.scripts:lint"
+identity-format = "services.identity.scripts:format_code"
+identity-format-check = "services.identity.scripts:format_check"
+
+# MZK Service - Development
+mzk-dev = "services.mzk.scripts:dev"
+mzk-dev-debug = "services.mzk.scripts:dev_debug"
+
+# MZK Service - Testing
+mzk-test = "services.mzk.scripts:test"
+mzk-test-cov = "services.mzk.scripts:test_cov"
+
+# MZK Service - Code quality
+mzk-lint = "services.mzk.scripts:lint"
+mzk-format = "services.mzk.scripts:format_code"
+mzk-format-check = "services.mzk.scripts:format_check"
+
+# MZK Service - Batch jobs
+mzk-batch-vehicle-enrollment = "services.mzk.scripts:run_vehicle_enrollment_job"
+mzk-batch-vehicle-unenrollment = "services.mzk.scripts:run_vehicle_unenrollment_job"
+mzk-batch-auto-vin-onboard = "services.mzk.scripts:run_auto_vin_onboard_job"
+mzk-batch-vehicle-defleet = "services.mzk.scripts:run_vehicle_defleet_job"
+mzk-batch-vin-enrollment = "services.mzk.scripts:run_vin_enrollment_job"
+
+# DLM Service - Development
+dlm-dev = "services.dlm.scripts:dev"
+dlm-dev-debug = "services.dlm.scripts:dev_debug"
+
+# DLM Service - Testing
+dlm-test = "services.dlm.scripts:test"
+dlm-test-cov = "services.dlm.scripts:test_cov"
+dlm-batch-geofence-monitor-assignment = "services.dlm.scripts:run_geofence_monitor_assignment_job"
+dlm-batch-curfew-monitor-assignment = "services.dlm.scripts:run_curfew_monitor_assignment_job"
+
+# DLM Service - Code quality
+dlm-lint = "services.dlm.scripts:lint"
+dlm-format = "services.dlm.scripts:format_code"
+dlm-format-check = "services.dlm.scripts:format_check"
+
+# DLM Service - Batch jobs
+dlm-batch-delivery = "services.dlm.scripts:run_schedule_delivery_activity_job"
+dlm-batch-pdi = "services.dlm.scripts:run_scheduling_pending_pdi_activity_job"
+dlm-batch-location-alert = "services.dlm.scripts:run_location_outdated_alert_job"
+dlm-batch-move-around-activity = "services.dlm.scripts:run_move_around_activity_job"
+dlm-batch-activity-status-update = "services.dlm.scripts:run_activity_status_update_job"
+dlm-batch-shipped-vehicles = "services.dlm.scripts:run_check_shipped_vehicles_job"
+dlm-batch-sync-delivery-dates = "services.dlm.scripts:run_sync_delivery_activity_dates_job"
+dlm-batch-bulk-ncc-onboarding = "services.dlm.scripts:run_bulk_ncc_onboarding_job"
+dlm-batch-health-alert-creation = "services.dlm.scripts:run_health_alert_creation_job"
+dlm-batch-health-alert-deactivation = "services.dlm.scripts:run_health_alert_deactivation_job"
+dlm-batch-vehicle-unenrollment = "services.dlm.scripts:run_vehicle_unenrollment_job"
+dlm-batch-revert-vehicle-status = "services.dlm.scripts:run_revert_vehicle_status_job"
+dlm-batch-sync-user-status = "services.dlm.scripts:run_update_user_status_from_ingestion_job"
+dlm-batch-vehicle-status-transition = "services.dlm.scripts:run_vehicle_status_transition_job"
+
+# Shared Database Operations - Centralized Migration Management
+# Identity Service Database
+identity-db-upgrade = "shared.migrations.identity_migrations:db_upgrade"
+identity-db-downgrade = "shared.migrations.identity_migrations:db_downgrade"
+identity-db-revision = "shared.migrations.identity_migrations:db_revision"
+identity-db-history = "shared.migrations.identity_migrations:db_history"
+identity-db-current = "shared.migrations.identity_migrations:db_current"
+identity-db-reset = "shared.migrations.identity_migrations:db_reset"
+identity-db-check = "shared.migrations.identity_migrations:db_check"
+
+# MZK Service Database
+mzk-db-upgrade = "shared.migrations.mzk_migrations:db_upgrade"
+mzk-db-downgrade = "shared.migrations.mzk_migrations:db_downgrade"
+mzk-db-revision = "shared.migrations.mzk_migrations:db_revision"
+mzk-db-history = "shared.migrations.mzk_migrations:db_history"
+mzk-db-current = "shared.migrations.mzk_migrations:db_current"
+mzk-db-reset = "shared.migrations.mzk_migrations:db_reset"
+mzk-db-check = "shared.migrations.mzk_migrations:db_check"
+mzk-db-migrate = "shared.migrations.mzk_migrations:db_migrate"
+
+# DLM Service Database
+dlm-db-upgrade = "shared.migrations.dlm_migrations:db_upgrade"
+dlm-db-downgrade = "shared.migrations.dlm_migrations:db_downgrade"
+dlm-db-revision = "shared.migrations.dlm_migrations:db_revision"
+dlm-db-history = "shared.migrations.dlm_migrations:db_history"
+dlm-db-current = "shared.migrations.dlm_migrations:db_current"
+dlm-db-reset = "shared.migrations.dlm_migrations:db_reset"
+dlm-db-check = "shared.migrations.dlm_migrations:db_check"
+
+# Centralized Migration Manager CLI
+migrations-cli = "shared.migrations.manager:cli"
+
+# Essential tool configurations
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+line-length = 88
+known_first_party = ["services", "shared", "conexio", "migrations"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "alembic.*",
+    "sqlalchemy.*",
+    "asyncpg.*",
+    "psycopg2.*",
+    "boto3.*",
+    "jose.*",
+    "passlib.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
