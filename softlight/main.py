@@ -1,45 +1,83 @@
-# main.py
-import argparse
-from softlight.browserController.browser_controller import BrowserController
-from softlight.agent.agent import Agent
-from softlight.domProcessor.dom_serializer import serialize_dom
-# from state_capture import save_state # Assuming this is implemented
+# main.py - Two-Agent System Main Entry Point
+from softlight.orchestrator import TwoAgentOrchestrator
+from softlight.core.config.logger import setup_logger
 
-def main(task: str, url: str):
-    browser = BrowserController()
-    agent = Agent()
+logger = setup_logger(__name__)
+
+
+def main(question: str, url: str, app_name: str = "Unknown", use_profile: bool = False):
+    """
+    Main entry point for the two-agent UI capture system.
+    
+    This system uses two agents:
+    - Agent A (Executor): Observes pages, executes actions, reports results
+    - Agent B (Instructor): Analyzes observations, provides step-by-step instructions
+    
+    Args:
+        question: User's task/question (e.g., "Search for Softlight on Google")
+        url: Starting URL for the task
+        app_name: Name of the application for dataset organization
+        use_profile: If True, uses existing Chrome profile with logged-in sessions
+        
+    Returns:
+        Path to the saved dataset
+    """
+    orchestrator = TwoAgentOrchestrator(use_existing_profile=use_profile)
     
     try:
-        browser.navigate(url)
+        dataset_path = orchestrator.run_task(question, url, app_name)
+        return dataset_path
         
-        for step in range(15): # Max steps to prevent infinite loops
-            print(f"\n--- Step {step} ---")
-            
-            # 1. OBSERVE
-            screenshot, html = browser.get_observation()
-            serialized_dom, updated_html = serialize_dom(html)
-            
-            # This step is crucial: update the live page with our tracking IDs
-            browser.inject_serializer_ids(updated_html)
-            
-            # 2. DECIDE
-            action = agent.decide_next_action(task, screenshot, serialized_dom)
-            print(f"Agent Action: {action}")
-            
-            # TODO: save_state(task, step, screenshot, serialized_dom, action)
-            
-            if action.upper() == "FINISH":
-                print("Task complete.")
-                break
-            
-            # 3. ACT
-            browser.execute_action(action)
-            
-    finally:
-        browser.close()
+    except KeyboardInterrupt:
+        logger.info("Task interrupted by user")
+        print("\n\n⏸️  Task interrupted by user.")
+        return None
+        
+    except Exception as e:
+        logger.error("Task failed", error=str(e), error_type=type(e).__name__)
+        print(f"\n❌ Task failed: {e}")
+        raise
+
 
 if __name__ == "__main__":
-    task = "what all button do you see on the page?"
-    url = "https://www.google.com/"
+    # Example 1: Google Search (no login needed)
+    # question = "Search for Softlight on Google"
+    # url = "https://www.google.com/"
+    # app_name = "Google"
+    # use_profile = False
     
-    main(task=task, url=url)
+    # Example 2: Linear Tasks (requires login - use existing Chrome profile)
+    question = "Create a new issue and call it this issue as 'new issue'"
+    url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
+    app_name = "Linear"
+    use_profile = True  # Use existing Chrome profile with logged-in sessions
+    
+    # Example 3: Filter Issues in Linear
+    # question = "How do I filter issues by status in Linear?"
+    # url = "https://linear.app/test916/team/TES/active"
+    # app_name = "Linear"
+    # use_profile = True
+    
+    print("\n" + "="*70)
+    print("SOFTLIGHT - Two-Agent UI Capture System")
+    print("="*70)
+    print(f"\nRunning task: {question}")
+    print(f"Starting at: {url}")
+    print(f"App: {app_name}")
+    print(f"Using separate profile: {use_profile}\n")
+    
+    if use_profile:
+        print("ℹ️  Using separate Chrome profile for automation")
+        print("   Your main Chrome browser can stay open!")
+        print("   First run: You'll need to log into Linear manually")
+        print("   Future runs: Login will be remembered\n")
+    
+    dataset_path = main(question=question, url=url, app_name=app_name, use_profile=use_profile)
+    
+    if dataset_path:
+        print(f"\n✅ Success! Dataset saved to: {dataset_path}")
+        print("\nYou can find:")
+        print(f"  - Screenshots: {dataset_path}/step_*.png")
+        print(f"  - Metadata: {dataset_path}/metadata.json")
+    else:
+        print("\n⚠️  Task did not complete successfully.")

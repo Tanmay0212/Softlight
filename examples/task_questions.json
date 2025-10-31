@@ -1,0 +1,46 @@
+{
+  "description": "Example tasks for the Softlight two-agent UI capture system",
+  "tasks": [
+    {
+      "name": "google_search",
+      "question": "Search for Softlight on Google",
+      "url": "https://www.google.com/",
+      "app": "Google",
+      "expected_steps": "3-4"
+    },
+    {
+      "name": "linear_create_project",
+      "question": "How do I create a project in Linear?",
+      "url": "https://linear.app/test916/team/TES/active",
+      "app": "Linear",
+      "expected_steps": "5-7"
+    },
+    {
+      "name": "linear_filter_issues",
+      "question": "How do I filter issues by status in Linear?",
+      "url": "https://linear.app/test916/team/TES/active",
+      "app": "Linear",
+      "expected_steps": "3-5"
+    },
+    {
+      "name": "linear_assign_issue",
+      "question": "How do I assign an issue to someone in Linear?",
+      "url": "https://linear.app/test916/team/TES/active",
+      "app": "Linear",
+      "expected_steps": "4-6"
+    },
+    {
+      "name": "linear_create_label",
+      "question": "How do I create a new label in Linear?",
+      "url": "https://linear.app/test916/settings/labels",
+      "app": "Linear",
+      "expected_steps": "3-5"
+    }
+  ],
+  "notes": [
+    "Replace 'test916' with your actual Linear workspace identifier",
+    "Make sure you're logged into Linear before running these tasks",
+    "You can add your own tasks by following the same JSON structure"
+  ]
+}
+
