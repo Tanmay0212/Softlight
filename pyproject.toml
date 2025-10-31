@@ -41,19 +41,20 @@ dependencies = [
     "loguru>=0.7.3",
     "logfire>=4.3.3",
     "neon-client>=0.1.0",
-
     # 🔒 Pins to avoid resolver backtracking to compile-only combos
     "ibis-framework[postgres,snowflake]==10.8.0",
     "snowflake-connector-python==3.17.3",
     "pyarrow==21.0.0",
     "pandas==2.3.2",
     "numpy==2.3.3",
-
     # Your new lib, pinned to avoid re-resolve churn
     "transitions==0.9.3",
-
     "psycopg[binary]>=3.2.7",
     "python-statemachine>=2.5.0",
+    "playwright>=1.55.0",
+    "langchain>=1.0.3",
+    "langchain-openai>=1.0.1",
+    "bs4>=0.0.2",
 ]
 
 [project.optional-dependencies]
