@@ -130,10 +130,18 @@ class BrowserController:
             logger.info("Continuing without data-bid attributes (agents will use other element selectors)")
 
 
-    def execute_action(self, command: str, max_retries: int = 3) -> bool:
+    def execute_action(self, command: str, element_map: dict = None, max_retries: int = 3) -> bool:
         """
         Parses and executes an action command from the agent.
-        Returns True if successful, False otherwise.
+        Uses hybrid selector strategy with multiple fallbacks for reliability.
+        
+        Args:
+            command: Action command string (e.g., "CLICK 5")
+            element_map: Dict mapping bid -> element info for fallback selection
+            max_retries: Number of retry attempts
+            
+        Returns:
+            True if successful, False otherwise.
         """
         print(f"Executing action: {command}")
         
@@ -143,49 +151,202 @@ class BrowserController:
         parts = command_line.split(" ", 2)
         action_type = parts[0].upper()
         
+        element_map = element_map or {}
+        
         for attempt in range(max_retries):
             try:
                 if action_type == "CLICK":
                     bid = parts[1]
-                    selector = f'[data-bid="{bid}"]'
-                    self.page.click(selector, timeout=30000)
-                    print(f"✓ Clicked element with bid={bid}")
+                    if self._click_element(bid, element_map):
+                        print(f"✓ Clicked element with bid={bid}")
+                        # Wait for the UI to settle after click
+                        self.page.wait_for_load_state('networkidle', timeout=10000)
+                        return True
+                    else:
+                        raise Exception(f"Could not click element bid={bid}")
                 
                 elif action_type == "TYPE":
                     bid = parts[1]
                     text_to_type = parts[2].strip('"\'')
-                    selector = f'[data-bid="{bid}"]'
-                    self.page.fill(selector, text_to_type, timeout=30000)
-                    print(f"✓ Typed '{text_to_type}' into element with bid={bid}")
-                    
-                    # Also press Enter for search boxes
-                    self.page.press(selector, "Enter")
+                    if self._type_into_element(bid, text_to_type, element_map):
+                        print(f"✓ Typed '{text_to_type}' into element with bid={bid}")
+                        return True
+                    else:
+                        raise Exception(f"Could not type into element bid={bid}")
                 
                 elif action_type == "SCROLL":
                     direction = parts[1].upper() if len(parts) > 1 else "DOWN"
                     self.scroll(direction)
                     print(f"✓ Scrolled {direction}")
+                    return True
                 
                 elif action_type == "WAIT":
                     self.wait()
                     print("✓ Waited 2 seconds")
+                    return True
                 
                 else:
                     print(f"⚠ Unknown action type: {action_type}")
                     return False
                 
-                # Wait for the UI to settle after an action
-                self.page.wait_for_load_state('networkidle', timeout=30000)
-                return True  # Success
-                
             except Exception as e:
                 if attempt < max_retries - 1:
-                    print(f"⚠ Attempt {attempt + 1} failed: {e}. Retrying...")
+                    print(f"⚠ Attempt {attempt + 1} failed: {str(e)[:100]}. Retrying...")
                     time.sleep(1)
                 else:
-                    print(f"✗ Action failed after {max_retries} attempts: {e}")
+                    print(f"✗ Action failed after {max_retries} attempts: {str(e)[:100]}")
                     return False
         
+        return False
+    
+    def _click_element(self, bid: str, element_map: dict) -> bool:
+        """
+        Hybrid selector strategy to click an element.
+        Tries multiple methods in order of reliability.
+        """
+        elem_info = element_map.get(bid, {})
+        
+        # Strategy 1: Try data-bid (fast if injection worked)
+        try:
+            self.page.click(f'[data-bid="{bid}"]', timeout=3000)
+            logger.debug(f"Clicked by data-bid: {bid}")
+            return True
+        except Exception as e:
+            logger.debug(f"data-bid failed: {str(e)[:50]}")
+        
+        # Strategy 2: Playwright's getByRole (most reliable!)
+        if elem_info.get('role') and elem_info.get('text'):
+            try:
+                self.page.get_by_role(
+                    elem_info['role'], 
+                    name=elem_info['text']
+                ).first.click(timeout=5000)
+                logger.debug(f"Clicked by role+name: {elem_info['role']}")
+                return True
+            except Exception as e:
+                logger.debug(f"role+name failed: {str(e)[:50]}")
+        
+        # Strategy 3: By aria-label (accessible elements)
+        if elem_info.get('aria_label'):
+            try:
+                self.page.get_by_label(elem_info['aria_label']).first.click(timeout=5000)
+                logger.debug(f"Clicked by aria-label")
+                return True
+            except Exception as e:
+                logger.debug(f"aria-label failed: {str(e)[:50]}")
+        
+        # Strategy 4: By placeholder (form inputs)
+        if elem_info.get('placeholder'):
+            try:
+                self.page.get_by_placeholder(elem_info['placeholder']).first.click(timeout=5000)
+                logger.debug(f"Clicked by placeholder")
+                return True
+            except Exception as e:
+                logger.debug(f"placeholder failed: {str(e)[:50]}")
+        
+        # Strategy 5: By name attribute (form elements)
+        if elem_info.get('name'):
+            try:
+                selector = f'[name="{elem_info["name"]}"]'
+                self.page.click(selector, timeout=5000)
+                logger.debug(f"Clicked by name attribute")
+                return True
+            except Exception as e:
+                logger.debug(f"name attribute failed: {str(e)[:50]}")
+        
+        # Strategy 6: By ID (if present)
+        if elem_info.get('id'):
+            try:
+                self.page.click(f'#{elem_info["id"]}', timeout=5000)
+                logger.debug(f"Clicked by ID")
+                return True
+            except Exception as e:
+                logger.debug(f"ID failed: {str(e)[:50]}")
+        
+        # Strategy 7: By text content (last resort)
+        if elem_info.get('text'):
+            try:
+                tag = elem_info.get('tag', 'button')
+                self.page.locator(tag).filter(
+                    has_text=elem_info['text']
+                ).first.click(timeout=5000)
+                logger.debug(f"Clicked by text content")
+                return True
+            except Exception as e:
+                logger.debug(f"text content failed: {str(e)[:50]}")
+        
+        logger.warning(f"All click strategies failed for bid={bid}")
+        return False
+    
+    def _type_into_element(self, bid: str, text: str, element_map: dict) -> bool:
+        """
+        Hybrid selector strategy to type into an element.
+        Tries multiple methods in order of reliability.
+        """
+        elem_info = element_map.get(bid, {})
+        
+        # Strategy 1: Try data-bid (fast if injection worked)
+        try:
+            selector = f'[data-bid="{bid}"]'
+            self.page.fill(selector, text, timeout=3000)
+            logger.debug(f"Typed by data-bid: {bid}")
+            return True
+        except Exception as e:
+            logger.debug(f"data-bid fill failed: {str(e)[:50]}")
+        
+        # Strategy 2: Playwright's getByRole for textbox
+        if elem_info.get('role') in ['textbox', 'searchbox', 'combobox']:
+            try:
+                locator = self.page.get_by_role(elem_info['role'])
+                if elem_info.get('aria_label'):
+                    locator = locator.filter(has_text=elem_info['aria_label'])
+                locator.first.fill(text, timeout=5000)
+                logger.debug(f"Typed by role: {elem_info['role']}")
+                return True
+            except Exception as e:
+                logger.debug(f"role fill failed: {str(e)[:50]}")
+        
+        # Strategy 3: By placeholder
+        if elem_info.get('placeholder'):
+            try:
+                self.page.get_by_placeholder(elem_info['placeholder']).first.fill(text, timeout=5000)
+                logger.debug(f"Typed by placeholder")
+                return True
+            except Exception as e:
+                logger.debug(f"placeholder fill failed: {str(e)[:50]}")
+        
+        # Strategy 4: By aria-label
+        if elem_info.get('aria_label'):
+            try:
+                self.page.get_by_label(elem_info['aria_label']).first.fill(text, timeout=5000)
+                logger.debug(f"Typed by aria-label")
+                return True
+            except Exception as e:
+                logger.debug(f"aria-label fill failed: {str(e)[:50]}")
+        
+        # Strategy 5: By name attribute
+        if elem_info.get('name'):
+            try:
+                selector = f'[name="{elem_info["name"]}"]'
+                self.page.fill(selector, text, timeout=5000)
+                logger.debug(f"Typed by name attribute")
+                return True
+            except Exception as e:
+                logger.debug(f"name attribute fill failed: {str(e)[:50]}")
+        
+        # Strategy 6: For contenteditable, use click + type
+        if elem_info.get('contenteditable'):
+            try:
+                # First click to focus
+                if self._click_element(bid, element_map):
+                    # Then type
+                    self.page.keyboard.type(text, delay=50)
+                    logger.debug(f"Typed into contenteditable by keyboard")
+                    return True
+            except Exception as e:
+                logger.debug(f"contenteditable type failed: {str(e)[:50]}")
+        
+        logger.warning(f"All type strategies failed for bid={bid}")
         return False
     
     def scroll(self, direction: str = "DOWN"):

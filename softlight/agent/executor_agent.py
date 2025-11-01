@@ -92,13 +92,14 @@ Be specific and mention bid numbers for elements you see.
         logger.info("Agent A observation", step=step_num, observation=observation[:200])
         return observation
     
-    def execute_instruction(self, instruction: str, serialized_dom: str) -> Dict[str, any]:
+    def execute_instruction(self, instruction: str, serialized_dom: str, element_map: dict = None) -> Dict[str, any]:
         """
         Execute Agent B's instruction and report the result.
         
         Args:
             instruction: Instruction from Agent B
             serialized_dom: Current DOM for action execution
+            element_map: Mapping of bid -> element info for fallback selection
             
         Returns:
             Dict with success, action taken, and result description
@@ -115,9 +116,9 @@ Be specific and mention bid numbers for elements you see.
                 "result": f"Could not understand instruction: {instruction}"
             }
         
-        # Execute the action using browser controller
+        # Execute the action using browser controller with element_map
         try:
-            success = self.browser.execute_action(action)
+            success = self.browser.execute_action(action, element_map=element_map)
             
             if success:
                 result_desc = self._describe_action_result(action)

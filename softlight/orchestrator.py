@@ -70,7 +70,7 @@ class TwoAgentOrchestrator:
             print(f"{'-'*70}")
             
             screenshot, html = self.browser.get_observation()
-            serialized_dom, updated_html = serialize_dom(html)
+            serialized_dom, updated_html, element_map = serialize_dom(html)
             self.browser.inject_serializer_ids(updated_html)
             
             # Capture initial state
@@ -108,7 +108,7 @@ class TwoAgentOrchestrator:
                 
                 # Agent A executes instruction
                 print(f"⚙️  Agent A executing...")
-                result = self.agent_a.execute_instruction(instruction, serialized_dom)
+                result = self.agent_a.execute_instruction(instruction, serialized_dom, element_map)
                 
                 # Update conversation log with execution results
                 conversation_entry["agent_a_action"] = result["action"]
@@ -116,7 +116,7 @@ class TwoAgentOrchestrator:
                 
                 # Capture state after execution
                 screenshot, html = self.browser.get_observation()
-                serialized_dom, updated_html = serialize_dom(html)
+                serialized_dom, updated_html, element_map = serialize_dom(html)
                 self.browser.inject_serializer_ids(updated_html)
                 
                 action_desc = result["action"].replace(" ", "_")[:50]

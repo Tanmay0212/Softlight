@@ -1,7 +1,7 @@
 # dom_serializer.py
 from bs4 import BeautifulSoup
 
-def serialize_dom(html_content: str) -> (str, str):
+def serialize_dom(html_content: str) -> tuple[str, str, dict]:
     """
     Processes HTML to create a simplified representation for the LLM and
     inject data-bid attributes for element identification.
@@ -9,6 +9,7 @@ def serialize_dom(html_content: str) -> (str, str):
     Returns:
         - A string of labeled elements for the LLM (e.g., "<button bid=1>...").
         - Updated HTML with data-bid attributes injected.
+        - Element map (bid -> element info) for fallback selection when data-bid injection fails.
     """
     soup = BeautifulSoup(html_content, 'html.parser')
     
@@ -40,6 +41,7 @@ def serialize_dom(html_content: str) -> (str, str):
     ))
 
     llm_representation = []
+    element_map = {}  # bid -> element info for fallback selection
 
     for i, element in enumerate(all_interactable):
         bid = str(i + 1)  # Use 1-based indexing for clarity
@@ -58,6 +60,22 @@ def serialize_dom(html_content: str) -> (str, str):
         value = element.get('value', '')
         role = element.get('role', '')
         contenteditable = element.get('contenteditable', '')
+        element_id = element.get('id', '')
+        classes = element.get('class', [])
+        
+        # Store element info for fallback selection (when data-bid injection fails due to CSP)
+        element_map[bid] = {
+            'tag': tag,
+            'text': text,
+            'type': element_type,
+            'placeholder': placeholder,
+            'aria_label': aria_label,
+            'name': name,
+            'role': role,
+            'id': element_id,
+            'classes': classes if isinstance(classes, list) else [classes],
+            'contenteditable': contenteditable == 'true'
+        }
         
         # Build a more descriptive representation
         attrs = []
@@ -79,5 +97,5 @@ def serialize_dom(html_content: str) -> (str, str):
         attrs_str = ' ' + ' '.join(attrs) if attrs else ''
         llm_representation.append(f"<{tag} bid={bid}{attrs_str}>{text}</{tag}>")
 
-    # Return the LLM representation and the updated HTML with data-bid attributes
-    return "\n".join(llm_representation), soup.prettify()
+    # Return the LLM representation, updated HTML, and element map
+    return "\n".join(llm_representation), soup.prettify(), element_map

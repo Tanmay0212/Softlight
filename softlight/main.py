@@ -47,7 +47,7 @@ if __name__ == "__main__":
     # use_profile = False
     
     # Example 2: Linear Tasks (requires login - use existing Chrome profile)
-    question = "Create a new issue and call it this issue as 'new issue'"
+    question = "create a new issue with name 'High priority issue' and set its priority to 'High' and create that issue"
     url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
     app_name = "Linear"
     use_profile = True  # Use existing Chrome profile with logged-in sessions
