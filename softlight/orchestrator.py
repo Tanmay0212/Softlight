@@ -80,60 +80,100 @@ class TwoAgentOrchestrator:
             agent_a_observation = self.agent_a.observe_and_report(screenshot, serialized_dom, 0)
             print(f"🤖 Agent A: {agent_a_observation[:200]}...")
             
-            # Main loop
+            # Main loop with recovery: re-observe + re-plan when an action fails
+            task_done = False
             for step in range(1, Settings.MAX_STEPS + 1):
                 print(f"\n📸 Step {step}")
                 print(f"{'-'*70}")
-                
-                # Agent B provides instruction based on Agent A's observation
-                instruction = self.agent_b.provide_instruction(agent_a_observation, screenshot)
-                print(f"🧠 Agent B: {instruction}")
-                
-                # Log conversation
-                conversation_entry = {
-                    "step_num": step - 1,
-                    "agent_a_observation": agent_a_observation,
-                    "screenshot": f"step_{step-1}.png",
-                    "agent_b_instruction": instruction
-                }
-                
-                # Check if complete
-                if "TASK_COMPLETE" in instruction.upper() or self.agent_b.is_task_complete(agent_a_observation):
-                    print(f"\n✅ Task Complete!")
-                    print(f"{'-'*70}")
-                    conversation_entry["agent_a_action"] = "TASK_COMPLETE"
-                    conversation_entry["agent_a_result"] = "Task completed successfully"
-                    self.conversation_log.append(conversation_entry)
+
+                current_observation = agent_a_observation
+                last_result = None
+
+                for attempt in range(Settings.RECOVERY_MAX_ATTEMPTS):
+                    # Agent B provides instruction based on latest observation
+                    instruction = self.agent_b.provide_instruction(current_observation, screenshot)
+                    print(f"🧠 Agent B: {instruction}")
+
+                    conversation_entry = {
+                        "step_num": step - 1,
+                        "attempt": attempt + 1,
+                        "agent_a_observation": current_observation,
+                        "screenshot": f"step_{step-1}.png",
+                        "agent_b_instruction": instruction
+                    }
+
+                    # Completion check
+                    if "TASK_COMPLETE" in instruction.upper() or self.agent_b.is_task_complete(current_observation):
+                        print(f"\n✅ Task Complete!")
+                        print(f"{'-'*70}")
+                        conversation_entry["agent_a_action"] = "TASK_COMPLETE"
+                        conversation_entry["agent_a_result"] = "Task completed successfully"
+                        self.conversation_log.append(conversation_entry)
+                        last_result = {"success": True, "action": "TASK_COMPLETE", "result": "Task completed successfully"}
+                        break
+
+                    # Execute the instruction
+                    print(f"⚙️  Agent A executing...")
+                    result = self.agent_a.execute_instruction(instruction, serialized_dom, element_map)
+                    last_result = result
+
+                    # Record result
+                    conversation_entry["agent_a_action"] = result["action"]
+                    conversation_entry["agent_a_result"] = result["result"]
+
+                    # Always re-observe after attempt (success or fail)
+                    screenshot, html = self.browser.get_observation()
+                    serialized_dom, updated_html, element_map = serialize_dom(html)
+                    self.browser.inject_serializer_ids(updated_html)
+
+                    action_desc = result["action"].replace(" ", "_")[:50]
+                    self.screenshot_mgr.capture_state(step, action_desc, task_id)
+
+                    fresh_obs = self.agent_a.observe_and_report(screenshot, serialized_dom, step)
+
+                    if result.get("success"):
+                        # Success: enrich observation then check completion on fresh state
+                        observation_with_context = f"Previous action: {result['action']}. Result: {result['result']}. Current observation: {fresh_obs}"
+                        conversation_entry["agent_a_next_observation"] = fresh_obs
+                        self.conversation_log.append(conversation_entry)
+                        print(f"✅ Action completed: {result['action']}")
+                        print(f"📋 Result: {result['result']}")
+
+                        # Post-success completion check to avoid extra planning loops
+                        if self.agent_b.is_task_complete(fresh_obs):
+                            print(f"\n✅ Task Complete!")
+                            print(f"{'-'*70}")
+                            self.conversation_log.append({
+                                "step_num": step - 1,
+                                "attempt": attempt + 1,
+                                "agent_a_observation": observation_with_context,
+                                "agent_b_instruction": "TASK_COMPLETE (post-success check)",
+                                "agent_a_action": result["action"],
+                                "agent_a_result": result["result"],
+                                "agent_a_next_observation": fresh_obs
+                            })
+                            task_done = True
+                            break
+
+                        # Not complete yet → continue to next step with enriched observation
+                        agent_a_observation = observation_with_context
+                        break
+                    else:
+                        # Failure: re-plan using fresh observation
+                        recovery_context = f"Previous action FAILED: {result['action']}. Error: {result['result']}. Current observation: {fresh_obs}"
+                        conversation_entry["agent_a_next_observation"] = fresh_obs
+                        self.conversation_log.append(conversation_entry)
+                        print(f"⚠️ Attempt {attempt + 1} failed: {result['result']}")
+                        current_observation = recovery_context
+
+                # If recovery loop ended without success, move on (prevents infinite loops)
+                if last_result and not last_result.get("success"):
+                    print(f"↩️ Moving to next step after {Settings.RECOVERY_MAX_ATTEMPTS} failed replans.")
+                    agent_a_observation = current_observation
+
+                # If marked complete in post-success check, exit outer loop
+                if task_done:
                     break
-                
-                # Agent A executes instruction
-                print(f"⚙️  Agent A executing...")
-                result = self.agent_a.execute_instruction(instruction, serialized_dom, element_map)
-                
-                # Update conversation log with execution results
-                conversation_entry["agent_a_action"] = result["action"]
-                conversation_entry["agent_a_result"] = result["result"]
-                
-                # Capture state after execution
-                screenshot, html = self.browser.get_observation()
-                serialized_dom, updated_html, element_map = serialize_dom(html)
-                self.browser.inject_serializer_ids(updated_html)
-                
-                action_desc = result["action"].replace(" ", "_")[:50]
-                self.screenshot_mgr.capture_state(step, action_desc, task_id)
-                
-                # Agent A observes and reports result to Agent B
-                agent_a_observation = self.agent_a.observe_and_report(screenshot, serialized_dom, step)
-                observation_with_context = f"Previous action: {result['action']}. Result: {result['result']}. Current observation: {agent_a_observation}"
-                
-                conversation_entry["agent_a_next_observation"] = agent_a_observation
-                self.conversation_log.append(conversation_entry)
-                
-                print(f"✅ Action completed: {result['action']}")
-                print(f"📋 Result: {result['result']}")
-                
-                # Update observation for next iteration
-                agent_a_observation = observation_with_context
                 
             else:
                 # Max steps reached

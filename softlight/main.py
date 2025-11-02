@@ -47,10 +47,20 @@ if __name__ == "__main__":
     # use_profile = False
     
     # Example 2: Linear Tasks (requires login - use existing Chrome profile)
-    question = "create a new issue with name 'High priority issue' and set its priority to 'High' and create that issue"
+    # question = "give me list of projects that I have"
+    # url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
+    # app_name = "Linear"
+    # use_profile = True  # Use existing Chrome profile with logged-in sessions
+
+    # question = "select 'Import your data (4)' issue and then assign it to Tanmay Bhardwaj"
+    # url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
+    # app_name = "Linear"
+    # use_profile = True
+
+    question = "select issue with name 'Bot issue 1' and then set its priority to 'High'"
     url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
     app_name = "Linear"
-    use_profile = True  # Use existing Chrome profile with logged-in sessions
+    use_profile = True
     
     # Example 3: Filter Issues in Linear
     # question = "How do I filter issues by status in Linear?"

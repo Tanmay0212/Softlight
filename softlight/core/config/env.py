@@ -31,6 +31,8 @@ class Settings:
     
     # Action Configuration
     MAX_ACTION_RETRIES = int(os.getenv("MAX_ACTION_RETRIES", "3"))
+    # Recovery loop when an action fails (re-observe + re-plan per step)
+    RECOVERY_MAX_ATTEMPTS = int(os.getenv("RECOVERY_MAX_ATTEMPTS", "2"))
     
     # Output Configuration
     DATASET_DIR = os.getenv("DATASET_DIR", "datasets")

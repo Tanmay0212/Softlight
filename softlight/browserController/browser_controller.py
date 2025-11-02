@@ -130,7 +130,7 @@ class BrowserController:
             logger.info("Continuing without data-bid attributes (agents will use other element selectors)")
 
 
-    def execute_action(self, command: str, element_map: dict = None, max_retries: int = 3) -> bool:
+    def execute_action(self, command: str, element_map: dict = None, max_retries: int = Settings.MAX_ACTION_RETRIES) -> bool:
         """
         Parses and executes an action command from the agent.
         Uses hybrid selector strategy with multiple fallbacks for reliability.
