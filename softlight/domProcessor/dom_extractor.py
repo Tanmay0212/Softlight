@@ -150,6 +150,9 @@ class DOMExtractor:
             # Extract attributes
             attrs = element.attrs
             
+            # Find nearby label (for context)
+            nearby_label = self._find_nearby_label(element, attrs)
+            
             # Build ElementInfo
             elem_info = ElementInfo(
                 bid=bid,
@@ -159,6 +162,7 @@ class DOMExtractor:
                 aria_label=attrs.get('aria-label'),
                 aria_describedby=attrs.get('aria-describedby'),
                 placeholder=attrs.get('placeholder'),
+                nearby_label=nearby_label,
                 name=attrs.get('name'),
                 id=attrs.get('id'),
                 classes=attrs.get('class', []) if isinstance(attrs.get('class'), list) else [attrs.get('class', '')],
@@ -274,6 +278,87 @@ class DOMExtractor:
     def reset_counter(self):
         """Reset bid counter (useful for testing)"""
         self._bid_counter = 0
+    
+    def _find_nearby_label(self, element: Tag, attrs: dict) -> Optional[str]:
+        """
+        Find nearby label text to provide context for the element.
+        
+        This helps disambiguate similar elements (e.g., multiple contenteditable divs).
+        
+        Strategy:
+        1. Check for <label> with matching 'for' attribute
+        2. Check parent <label> element
+        3. Check preceding sibling text elements (h1-h6, label, span, div with text)
+        4. Check aria-labelledby reference
+        5. Check parent's preceding text
+        
+        Args:
+            element: BeautifulSoup Tag
+            attrs: Element attributes
+            
+        Returns:
+            Label text or None
+        """
+        try:
+            # Strategy 1: <label for="id">
+            if attrs.get('id'):
+                # Find label with for="id"
+                label = element.find_previous('label', attrs={'for': attrs['id']})
+                if not label:
+                    # Search forward too
+                    label = element.find_next('label', attrs={'for': attrs['id']})
+                if label:
+                    label_text = label.get_text(strip=True)
+                    if label_text:
+                        return label_text
+            
+            # Strategy 2: Parent <label>
+            parent = element.parent
+            if parent and parent.name == 'label':
+                # Get label text excluding the element itself
+                label_text = parent.get_text(strip=True)
+                elem_text = self._get_element_text(element) or ""
+                label_text = label_text.replace(elem_text, "").strip()
+                if label_text:
+                    return label_text
+            
+            # Strategy 3: Preceding sibling with meaningful text
+            # Look for h1-h6, label, span, div immediately before this element
+            prev_sibling = element.find_previous_sibling()
+            attempts = 0
+            while prev_sibling and attempts < 3:  # Check up to 3 siblings back
+                if prev_sibling.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'label', 'span', 'div', 'p']:
+                    sibling_text = prev_sibling.get_text(strip=True)
+                    # Only use if it's short enough to be a label (not a paragraph)
+                    if sibling_text and len(sibling_text) < 100:
+                        return sibling_text
+                prev_sibling = prev_sibling.find_previous_sibling()
+                attempts += 1
+            
+            # Strategy 4: Check aria-labelledby
+            if attrs.get('aria-labelledby'):
+                labelledby_id = attrs['aria-labelledby']
+                label_elem = element.find_previous(attrs={'id': labelledby_id})
+                if not label_elem:
+                    label_elem = element.find_next(attrs={'id': labelledby_id})
+                if label_elem:
+                    label_text = label_elem.get_text(strip=True)
+                    if label_text:
+                        return label_text
+            
+            # Strategy 5: Check parent's preceding sibling
+            if parent:
+                parent_prev = parent.find_previous_sibling()
+                if parent_prev and parent_prev.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'label', 'div']:
+                    parent_text = parent_prev.get_text(strip=True)
+                    if parent_text and len(parent_text) < 100:
+                        return parent_text
+            
+            return None
+            
+        except Exception as e:
+            logger.debug(f"Failed to find nearby label: {e}")
+            return None
 
 
 # Convenience function

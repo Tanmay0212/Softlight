@@ -277,14 +277,33 @@ class BrowserActions:
         """
         errors = []
         
-        # Strategy 1: Try data-bid
+        # Strategy 1: Try data-bid with fill() for standard inputs
         if bid:
             try:
                 self.page.fill(f'[data-bid="{bid}"]', text, timeout=3000)
                 logger.info("Typed by data-bid", bid=bid, method="data-bid")
                 return {"success": True, "error": None, "method": "data-bid"}
             except Exception as e:
-                errors.append(f"data-bid: {str(e)[:50]}")
+                error_str = str(e)
+                errors.append(f"data-bid: {error_str[:50]}")
+                
+                # If fill() failed because it's not an input, try contenteditable approach
+                if "not an <input>" in error_str or "not an <textarea>" in error_str:
+                    try:
+                        # Click to focus, then type with keyboard
+                        self.page.click(f'[data-bid="{bid}"]', timeout=3000)
+                        self.page.wait_for_timeout(200)  # Wait for focus
+                        
+                        # Clear existing content first
+                        self.page.keyboard.press("Control+A")  # Select all
+                        self.page.keyboard.press("Backspace")  # Delete
+                        
+                        # Type new text
+                        self.page.keyboard.type(text, delay=50)
+                        logger.info("Typed into contenteditable by data-bid", bid=bid, method="contenteditable-bid")
+                        return {"success": True, "error": None, "method": "contenteditable-bid"}
+                    except Exception as e2:
+                        errors.append(f"contenteditable-bid: {str(e2)[:50]}")
         
         # Strategy 2: Try semantic selectors
         if element_info:
@@ -317,6 +336,29 @@ class BrowserActions:
                     return {"success": True, "error": None, "method": "name"}
                 except Exception as e:
                     errors.append(f"name: {str(e)[:50]}")
+            
+            # Try contenteditable elements (divs, spans with contenteditable="true")
+            if element_info.get('contenteditable'):
+                try:
+                    # Find by any available selector
+                    selector = None
+                    if element_info.get('id'):
+                        selector = f"#{element_info['id']}"
+                    elif element_info.get('data_testid'):
+                        selector = f"[data-testid='{element_info['data_testid']}']"
+                    elif bid:
+                        selector = f'[data-bid="{bid}"]'
+                    
+                    if selector:
+                        self.page.click(selector, timeout=3000)
+                        self.page.wait_for_timeout(200)
+                        self.page.keyboard.press("Control+A")
+                        self.page.keyboard.press("Backspace")
+                        self.page.keyboard.type(text, delay=50)
+                        logger.info("Typed into contenteditable", method="contenteditable")
+                        return {"success": True, "error": None, "method": "contenteditable"}
+                except Exception as e:
+                    errors.append(f"contenteditable: {str(e)[:50]}")
         
         # Strategy 3: Fallback to coordinates (click then type)
         if x is not None and y is not None:
