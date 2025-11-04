@@ -18,6 +18,16 @@ class Settings:
     # Agent B (Instructor) Configuration
     AGENT_B_MODEL = os.getenv("AGENT_B_MODEL", "gpt-4o")
     AGENT_B_MAX_TOKENS = int(os.getenv("AGENT_B_MAX_TOKENS", "800"))
+    
+    # Vision Mode Configuration
+    VISION_MODE = os.getenv("VISION_MODE", "True").lower() == "true"
+    AGENT_B_VISION_MODEL = os.getenv("AGENT_B_VISION_MODEL", "gpt-4o")  # GPT-4 Vision model
+
+    # Hybrid DOM + Vision Configuration
+    AGENT_MODE = os.getenv("AGENT_MODE", "vision")  # "vision" or "hybrid"
+    DOM_EXTRACTION_ENABLED = os.getenv("DOM_EXTRACTION_ENABLED", "True").lower() == "true"
+    VISION_FALLBACK_ENABLED = os.getenv("VISION_FALLBACK_ENABLED", "True").lower() == "true"
+    MAX_ELEMENTS = int(os.getenv("MAX_ELEMENTS", "100"))  # Max elements to extract from DOM
 
     # Agent Configuration (Legacy - for backward compatibility)
     MAX_STEPS = int(os.getenv("MAX_STEPS", "20"))  # Maximum steps before stopping
