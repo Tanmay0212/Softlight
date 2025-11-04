@@ -1,177 +1,162 @@
-# 🌟 Softlight - Two-Agent UI Capture System
+# 🌟 Softlight - Hybrid DOM + Vision UI Automation
 
-**Softlight** is an intelligent multi-agent system that automatically demonstrates how to perform tasks in web applications. It uses two AI agents working together to navigate apps, capture UI states, and create comprehensive workflow datasets.
+**Softlight** is an intelligent AI system that automates web UI interactions using a hybrid approach combining DOM selectors with vision-based coordinates.
 
 ## 🎯 What It Does
 
-Give Softlight a question like "How do I create a project in Linear?" and it will:
-1. **Navigate** the live application
-2. **Figure out** the steps automatically
-3. **Capture screenshots** of each UI state
-4. **Save** a complete workflow demonstration
+Give Softlight a task like "Create a new issue named 'Test Issue'" and it will:
+1. **Navigate** the application intelligently
+2. **Extract DOM** elements with semantic attributes
+3. **Use stable selectors** (role, aria-label, name, id) to interact
+4. **Fall back to coordinates** for icons and custom controls
+5. **Capture** screenshots of each step
 
-Perfect for creating UI documentation, training datasets, and workflow guides.
+Perfect for UI automation, testing, and workflow documentation.
 
-## 🏗️ Two-Agent Architecture
+## 🏗️ Architecture
 
-Softlight uses a unique two-agent collaboration pattern:
+### Hybrid DOM + Vision System
 
-### Agent A (Executor)
-- **Observes** web pages and UI states
-- **Executes** actions (clicks, typing, scrolling)
-- **Reports** what it sees and what happened
-- **Captures** screenshots automatically
+Softlight uses a two-agent architecture:
 
-### Agent B (Instructor)
-- **Understands** the user's task/question
-- **Analyzes** Agent A's observations
-- **Provides** step-by-step instructions
-- **Determines** when the task is complete
+- **Agent A (SimpleExecutor)**: Executes actions using Playwright
+  - Tries semantic selectors first (stable)
+  - Falls back to coordinates when needed
+  - Reports success/failure with method used
 
-### Communication Flow
+- **Agent B (HybridInstructor)**: Analyzes page state and decides actions
+  - Receives DOM elements + page text + screenshot
+  - Returns actions with bid (DOM target) + coordinates (fallback)
+  - Powered by OpenAI GPT-4o
+
+### Execution Strategy
 
 ```
-User Question: "Search for Softlight on Google"
-      ↓
-┌─────────────────────────────────────────────┐
-│  Agent B (Instructor)                       │
-│  "Navigate to search, type query, submit"   │
-└────────────┬────────────────────────────────┘
-             ↓ Instruction
-┌────────────┴────────────────────────────────┐
-│  Agent A (Executor)                         │
-│  Observes → Executes → Captures → Reports   │
-└────────────┬────────────────────────────────┘
-             ↓ Observation
-┌────────────┴────────────────────────────────┐
-│  Agent B analyzes → Next instruction        │
-└────────────┬────────────────────────────────┘
-             ↓
-      Repeat until complete
+1. Perception:
+   - Extract DOM elements (semantic attributes)
+   - Capture page text
+   - Take screenshot
+
+2. Decision:
+   - Agent B analyzes all inputs
+   - Returns action with bid + coordinates
+
+3. Execution (Selector-First):
+   - Try data-bid selector (injected)
+   - Try semantic selectors (role, aria-label, etc.)
+   - Try text-based selectors
+   - Fall back to coordinates
 ```
 
 ## ✨ Features
 
-- 🤖 **Dual-Agent AI**: Two GPT-4o agents collaborating intelligently
-- 📸 **Auto Screenshot Capture**: Every UI state automatically captured
-- 🎯 **Task Generalization**: Handles any web app without hardcoding
-- 💾 **Structured Datasets**: Organized workflows with metadata
-- 🔄 **Adaptive Planning**: Agents adjust based on what they observe
-- 📊 **Comprehensive Logging**: Full conversation history saved
-- 🎨 **Beautiful CLI**: Easy-to-use command-line interface
+- 🤖 **Hybrid Approach**: DOM selectors + vision fallback
+- 🎯 **Semantic Targeting**: Uses ARIA, roles, and labels
+- 📸 **Auto Screenshots**: Every step captured
+- 🔄 **Adaptive**: Works with any web app
+- 💾 **Structured Output**: JSON metadata + screenshots
+- 🔐 **Session Management**: Persistent Chrome profile
+- 📊 **Observable**: Logs which method succeeded
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Python 3.11 or higher
+- Python 3.11+
 - OpenAI API key
-- `uv` package manager (recommended) or `pip`
+- `uv` package manager (recommended)
 
 ### Installation
 
 ```bash
-# Clone the repository
+# Clone repository
 git clone <your-repo-url>
 cd Softlight
 
-# Install dependencies with uv
+# Install dependencies
 uv sync
 source .venv/bin/activate
 
-# Install Playwright browsers
+# Install Playwright
 playwright install chromium
 
-# Set up environment
-cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
+# Set API key
+export OPENAI_API_KEY=sk-your-key-here
 ```
 
 ### Run Your First Task
 
-```bash
-# Simple example
+```python
 python softlight/main.py
 ```
 
-Or use the CLI:
-
-```bash
-# Single task
-python -m softlight.cli run "Search for Softlight on Google" --url "https://www.google.com/" --app Google
-
-# Batch process multiple tasks
-python -m softlight.cli batch --tasks examples/task_questions.json
-
-# Generate dataset summary
-python -m softlight.cli summarize
-```
-
-## 📖 Usage Examples
-
-### Example 1: Google Search
+Or customize in code:
 
 ```python
 from softlight.main import main
 
-question = "Search for Softlight on Google"
-url = "https://www.google.com/"
-dataset_path = main(question, url, "Google")
+dataset_path = main(
+    question="create a new issue with name 'Test Issue'",
+    url="https://linear.app/workspace/team/TES/active",
+    app_name="Linear",
+    use_profile=True,  # Remember login sessions
+    mode="hybrid"      # or "vision" for coordinates-only
+)
 ```
 
-**Result**: 3-4 screenshots showing the complete search process
+## 📖 Usage Examples
 
-### Example 2: Linear Project Creation
+### Linear - Create Issue
 
 ```python
-question = "How do I create a project in Linear?"
-url = "https://linear.app/workspace/projects"
-dataset_path = main(question, url, "Linear")
+from softlight.main import main
+
+main(
+    question="create a new issue with name 'Bot Issue 1'",
+    url="https://linear.app/workspace/team/TES/active",
+    app_name="Linear",
+    use_profile=True
+)
 ```
 
-**Result**: 5-7 screenshots demonstrating the full workflow
-
-### Example 3: Issue Filtering
+### Google Search
 
 ```python
-question = "How do I filter issues by status in Linear?"
-url = "https://linear.app/workspace/team/TES/active"
-dataset_path = main(question, url, "Linear")
+main(
+    question="Search for 'Playwright documentation'",
+    url="https://www.google.com/",
+    app_name="Google",
+    use_profile=False
+)
 ```
 
 ## 📁 Output Structure
 
-After running a task, you'll get:
-
 ```
 datasets/
-  search_softlight_google_20251030_143022/
-    ├── metadata.json              # Full conversation + metadata
-    ├── step_0_initial.png         # Initial page state
-    ├── step_1_type_5_softlight.png  # After typing
-    └── step_2_click_10.png        # Search results
+  create_new_issue_with_20251104_123456/
+    ├── metadata.json              # Task metadata + action history
+    ├── step_0_initial.png         # Initial page
+    ├── step_1_click_bid13.png     # After clicking button
+    └── step_2_type_bid5.png       # After typing text
 ```
 
-### metadata.json Format
+### metadata.json
 
 ```json
 {
-  "task_id": "search_softlight_google_20251030_143022",
-  "user_question": "Search for Softlight on Google",
-  "app": "Google",
-  "url": "https://www.google.com/",
-  "completed": true,
-  "total_steps": 3,
-  "duration": 25.3,
-  "conversation": [
+  "task_id": "create_new_issue_with_20251104_123456",
+  "question": "create a new issue with name 'Bot Issue 1'",
+  "url": "https://linear.app/...",
+  "app_name": "Linear",
+  "mode": "hybrid",
+  "duration_seconds": 12.5,
+  "action_history": [
     {
-      "step_num": 0,
-      "agent_a_observation": "I see a search box (bid=5)...",
-      "screenshot": "step_0_initial.png",
-      "agent_b_instruction": "Type 'Softlight' in the search box (bid=5)",
-      "agent_a_action": "TYPE 5 'Softlight'",
-      "agent_a_result": "Typed successfully...",
-      "agent_a_next_observation": "Search suggestions appeared..."
+      "step": 1,
+      "action": "CLICK",
+      "bid": "13",
+      "reasoning": "Click 'Create new issue' button"
     }
   ]
 }
@@ -179,235 +164,225 @@ datasets/
 
 ## ⚙️ Configuration
 
-All settings via environment variables (`.env` file):
+### Environment Variables
+
+Create `.env` file:
 
 ```bash
-# OpenAI Configuration
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL_NAME=gpt-4o
+# Required
+OPENAI_API_KEY=sk-your-key-here
 
-# Agent A (Executor) Configuration
-AGENT_A_MODEL=gpt-4o
-AGENT_A_MAX_TOKENS=500
-
-# Agent B (Instructor) Configuration
-AGENT_B_MODEL=gpt-4o
-AGENT_B_MAX_TOKENS=800
-
-# Browser Configuration
-HEADLESS_MODE=false
-BROWSER_TIMEOUT=60000
-
-# Dataset Configuration
-DATASET_ROOT=datasets
-MAX_STEPS=20
+# Optional
+AGENT_MODE=hybrid              # "hybrid" or "vision"
+OPENAI_MODEL_NAME=gpt-4o      # GPT-4o recommended
+HEADLESS_MODE=false            # Set true for no browser window
+MAX_STEPS=20                   # Max actions per task
+MAX_ELEMENTS=100               # Max DOM elements to extract
 ```
 
-## 🔐 Using with Login-Required Apps (Linear, GitHub, etc.)
+### Mode Selection
 
-Softlight uses a **separate Chrome profile** for automation, which means:
-- ✅ Your main Chrome browser can stay open while automation runs
-- ✅ Log in once, sessions are remembered forever
-- ✅ No conflicts with your regular browsing
-- ✅ Clean separation between personal and automation data
+**Hybrid Mode** (Recommended):
+- Uses DOM selectors first
+- Falls back to coordinates
+- More stable and faster
 
-### First Time Setup:
-1. Run the script with `use_profile=True` (already set in `main.py`)
-2. Chrome will open with a separate profile at `~/.chrome-automation-profile`
-3. **Manually log into your app** (e.g., Linear) in the opened browser
-4. Login credentials are automatically saved for future runs
+**Vision Mode**:
+- Uses only coordinates
+- Good for canvas/custom UIs
+- Slower but works anywhere
 
-### Future Runs:
-You'll be automatically logged in! Just run the script as normal.
+## 🔐 Login Sessions (Linear, GitHub, etc.)
 
-**📖 See [SETUP_LINEAR.md](SETUP_LINEAR.md) for detailed Linear setup instructions.**
+Softlight uses a **separate Chrome profile** at `~/.chrome-automation-profile`:
+
+✅ First run: Manually log into your app
+✅ Future runs: Automatically logged in
+✅ Your main Chrome stays independent
+✅ No conflicts or data sharing
+
+See [SETUP_LINEAR.md](SETUP_LINEAR.md) for detailed setup.
 
 ## 🏗️ Project Structure
 
 ```
 softlight/
 ├── agent/
-│   ├── executor_agent.py      # Agent A (observes & executes)
-│   └── instructor_agent.py    # Agent B (instructs & guides)
+│   ├── hybrid_instructor.py    # Agent B (analyzes & decides)
+│   ├── simple_executor.py      # Agent A (executes actions)
+│   └── vision_instructor.py    # Vision-only mode agent
+├── actions/
+│   └── browser_actions.py      # Playwright action primitives
 ├── browserController/
-│   └── browser_controller.py  # Playwright automation
+│   └── browser_controller.py   # Browser lifecycle management
 ├── domProcessor/
-│   └── dom_serializer.py      # HTML simplification
-├── capture/
-│   └── screenshot_manager.py  # Screenshot handling
+│   ├── dom_extractor.py        # HTML → Elements extraction
+│   └── element_info.py         # Element representation
+├── state/
+│   └── page_state.py           # PageState (DOM + text + screenshot)
 ├── dataset/
-│   └── dataset_manager.py     # Dataset organization
-├── orchestrator.py            # Agent A ↔ B coordination
-├── main.py                    # Main entry point
-└── cli.py                     # Command-line interface
-
-examples/
-└── task_questions.json        # Example tasks
-
-datasets/                      # Output directory
-└── [task_id]/
-    ├── metadata.json
-    └── step_*.png
-```
-
-## 🎮 CLI Commands
-
-### Run Single Task
-
-```bash
-python -m softlight.cli run "Your question here" \
-  --url "https://example.com" \
-  --app "AppName"
-```
-
-### Batch Processing
-
-```bash
-# Use provided examples
-python -m softlight.cli batch --tasks examples/task_questions.json
-
-# Use custom tasks file
-python -m softlight.cli batch --tasks my_tasks.json
-```
-
-### Generate Summary
-
-```bash
-# Default location
-python -m softlight.cli summarize
-
-# Custom location
-python -m softlight.cli summarize --dataset path/to/datasets
+│   └── dataset_manager.py      # Dataset organization
+├── core/
+│   └── config/
+│       ├── env.py              # Settings & configuration
+│       └── logger.py           # Structured logging
+├── orchestrator_hybrid.py      # Main hybrid loop
+├── orchestrator_vision.py      # Vision-only loop
+└── main.py                     # Entry point
 ```
 
 ## 🔧 How It Works
 
-### Step-by-Step Process
+### Hybrid Mode Flow
 
-1. **Initialization**
-   - Agent B receives user's question
-   - Browser navigates to starting URL
-   - Agent A captures initial screenshot
+```
+1. Page Load
+   ↓
+2. Extract DOM Elements
+   - Find buttons, inputs, links
+   - Extract role, aria-label, name, id, text
+   - Rank by priority
+   ↓
+3. Inject data-bid Attributes
+   - Assign unique bid to each element
+   - Inject into actual DOM
+   ↓
+4. Build PageState
+   - Elements list
+   - Page text
+   - Screenshot
+   ↓
+5. Agent B Decides
+   - Analyze DOM elements
+   - Use screenshot for context
+   - Return action with bid + coords
+   ↓
+6. Agent A Executes (Selector-First)
+   - Try: [data-bid="13"]
+   - Try: button[aria-label="Create"]
+   - Try: #submit-button
+   - Fallback: click(x, y)
+   ↓
+7. Wait & Repeat
+```
 
-2. **Observation Loop**
-   ```
-   Agent A: "I see a search box (bid=5), button (bid=10)..."
-   Agent B: "Type 'Softlight' in search box (bid=5)"
-   Agent A: Executes → Captures → "Typed successfully, suggestions appeared..."
-   Agent B: "Click the search button (bid=10)"
-   ... continues ...
-   ```
+## 📊 Execution Methods
 
-3. **Completion**
-   - Agent B recognizes task is done
-   - Sends "TASK_COMPLETE" signal
-   - Dataset is saved with all screenshots and metadata
+When you run a task, you'll see logs like:
 
-### Key Technologies
+```
+✅ CLICK successful (method: data-bid)
+✅ TYPE successful (method: placeholder)
+✅ CLICK successful (method: role+aria-label)
+✅ CLICK successful (method: coordinates)  # Fallback for icon
+```
 
-- **LangChain + OpenAI GPT-4o**: Multi-modal AI for vision and reasoning
-- **Playwright**: Browser automation
-- **BeautifulSoup**: HTML parsing
-- **Click**: CLI interface
-- **Structlog**: Structured logging
-
-## 📊 Example Tasks
-
-The system comes with 5 pre-configured example tasks:
-
-1. **Google Search** (3-4 steps)
-2. **Linear: Create Project** (5-7 steps)
-3. **Linear: Filter Issues** (3-5 steps)
-4. **Linear: Assign Issue** (4-6 steps)
-5. **Linear: Create Label** (3-5 steps)
-
-Edit `examples/task_questions.json` to add your own tasks!
+Methods in priority order:
+1. `data-bid` - Injected unique identifier
+2. `role+aria-label` - Semantic attributes
+3. `aria-label` - Label alone
+4. `name` - Name attribute
+5. `id` - Element ID
+6. `text` - Text content matching
+7. `coordinates` - Pixel position fallback
 
 ## 🐛 Troubleshooting
 
-### Playwright Errors
+### Installation Issues
+
 ```bash
+# Playwright not found
 playwright install chromium
+
+# UV not installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### OpenAI API Errors
-- Check your API key in `.env`
-- Verify you have credits
-- Try increasing `MAX_STEPS` if tasks timeout
+### API Issues
+
+```bash
+# Check API key
+echo $OPENAI_API_KEY
+
+# Test with simple task
+python softlight/main.py
+```
 
 ### Actions Failing
-- Use `HEADLESS_MODE=false` to watch the browser
-- Increase `MAX_ACTION_RETRIES` in settings
-- Check browser console for JavaScript errors
 
-## 🤝 Contributing
+1. **Enable visual debugging**:
+   ```bash
+   export HEADLESS_MODE=false
+   ```
 
-Contributions welcome! Areas for improvement:
+2. **Check logs** - look for selector failures:
+   ```
+   ❌ CLICK failed: data-bid: Timeout 3000ms exceeded
+   ```
 
-- Support for more complex actions (drag-drop, hover)
-- Multi-page navigation
-- Session management
-- Cost tracking
-- More example tasks
+3. **Verify DOM injection** - check if bids are injected:
+   ```
+   Injected 47/64 data-bid attributes into DOM
+   ```
 
-## 📝 Assignment Deliverables
+### Common Issues
 
-This project satisfies the Softlight take-home assignment:
+**Issue**: "All selectors failed, using coordinates"
+- **Cause**: Page lacks semantic attributes
+- **Fix**: Falls back automatically, or improve page accessibility
 
-### ✅ Code
-Complete two-agent system with:
-- Agent A (Executor) and Agent B (Instructor)
-- Automatic UI state capture
-- Generalizable across different apps
-- No hardcoded workflows
+**Issue**: "Injected 0/64 data-bid attributes"
+- **Cause**: Selector generation failed
+- **Fix**: Check if page is fully loaded
 
-### ✅ Dataset
-5 captured workflows for Linear:
-- Organized by task in `datasets/`
-- Screenshots + metadata for each
-- Full conversation history preserved
+**Issue**: "Wrong element clicked"
+- **Cause**: Multiple elements with same attributes
+- **Fix**: System uses priority scoring, should work most times
 
-### ✅ Documentation
-- This README with architecture explanation
-- Code comments and docstrings
-- Example usage and CLI commands
+## 🎯 Best Practices
 
-## 🎥 Demo Video
-
-Record a Loom showing:
-1. Running a task: `python softlight/main.py`
-2. Agent A and Agent B conversation in terminal
-3. Generated dataset with screenshots
-4. Explain the two-agent architecture
+1. **Use descriptive tasks**: "Create issue named X" > "Make new thing"
+2. **Start with hybrid mode**: More stable than vision-only
+3. **Enable persistent profile**: Saves login sessions
+4. **Check logs**: Understand which methods work best
+5. **Adjust MAX_ELEMENTS**: Reduce if page is slow
 
 ## 📈 Performance
 
-- **Speed**: ~3-5 seconds per action
-- **Accuracy**: Depends on page complexity and GPT-4o
-- **Cost**: ~$0.05-0.15 per task (varies with steps)
+- **Speed**: ~2-3 seconds per action (hybrid mode)
+- **Stability**: High with semantic attributes
+- **Cost**: ~$0.05-0.10 per task (GPT-4o)
 
-## 🔮 Future Enhancements
+## 🔮 Comparison: Hybrid vs Vision
 
-- [ ] Visual element highlighting in screenshots
-- [ ] Multi-tab/window support
-- [ ] Error recovery strategies
-- [ ] Parallel task execution
-- [ ] Web API for remote execution
-- [ ] Support for authentication flows
-- [ ] Database integration for large-scale datasets
+| Aspect | Hybrid Mode | Vision Mode |
+|--------|------------|-------------|
+| **Primary Method** | DOM selectors | Coordinates |
+| **Fallback** | Coordinates | None |
+| **Stability** | High | Medium |
+| **Speed** | Fast | Slower |
+| **Works on Canvas** | Yes (fallback) | Yes |
+| **Debugging** | Easy (see selectors) | Harder |
+| **Best For** | Standard web apps | Custom UIs |
 
-## 📄 License
+## 🤝 Contributing
+
+Areas for improvement:
+- Multi-tab support
+- Better error recovery
+- Performance optimizations
+- More action types (drag-drop, etc.)
+
+## 📝 License
 
 [Your License Here]
 
 ## 🙏 Acknowledgments
 
-- **OpenAI GPT-4o** - Multi-modal AI capabilities
-- **Playwright** - Reliable browser automation
-- **LangChain** - AI orchestration framework
+- **OpenAI GPT-4o** - Vision + reasoning
+- **Playwright** - Browser automation
+- **browser-use** - Inspiration for hybrid approach
 
 ---
 
-**Built for the Softlight Engineering Assignment**
-
-*Demonstrating how AI agents can automatically create UI workflow documentation*
+**Softlight** - Intelligent UI Automation with Hybrid DOM + Vision

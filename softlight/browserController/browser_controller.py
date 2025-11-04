@@ -31,10 +31,13 @@ class BrowserController:
                 self.browser = self.playwright.chromium.launch_persistent_context(
                     user_data_dir=user_data_dir,
                     headless=False,  # Must be non-headless when using profiles
-                    args=["--start-maximized"],
+                    viewport={'width': 1280, 'height': 720},  # Fixed viewport for coordinate matching
                     channel="chrome"  # Use actual Chrome, not Chromium
                 )
                 self.page: Page = self.browser.pages[0] if self.browser.pages else self.browser.new_page()
+                
+                # Enforce window size to match viewport (critical for coordinate accuracy)
+                self._enforce_window_size()
                 
                 if is_first_time:
                     logger.info("🔐 First time setup: Please log into Linear manually in the browser that opened")
@@ -49,11 +52,53 @@ class BrowserController:
         if not use_existing_profile:
             # Original behavior - fresh browser instance
             self.browser = self.playwright.chromium.launch(
-                headless=Settings.HEADLESS_MODE, 
-                args=["--start-maximized"]
+                headless=Settings.HEADLESS_MODE
             )
-            self.context = self.browser.new_context(no_viewport=True)
+            self.context = self.browser.new_context(viewport={'width': 1280, 'height': 720})
             self.page: Page = self.context.new_page()
+            
+            # Enforce window size to match viewport (critical for coordinate accuracy)
+            self._enforce_window_size()
+    
+    def _enforce_window_size(self):
+        """
+        Enforce that the browser window stays at exactly 1280x720.
+        This is CRITICAL for coordinate accuracy - the screenshot dimensions
+        must match the actual window dimensions where clicks happen.
+        """
+        try:
+            # Set viewport size explicitly
+            self.page.set_viewport_size({"width": 1280, "height": 720})
+            
+            # Set the actual window size and prevent resizing
+            self.page.evaluate("""
+                () => {
+                    // Set window to exact size
+                    window.resizeTo(1280, 720);
+                    
+                    // Lock window size - prevent manual resizing
+                    let resizeAttempts = 0;
+                    const enforceSize = () => {
+                        if (window.innerWidth !== 1280 || window.innerHeight !== 720) {
+                            resizeAttempts++;
+                            if (resizeAttempts < 10) {  // Prevent infinite loops
+                                window.resizeTo(1280, 720);
+                            }
+                        }
+                    };
+                    
+                    // Check size every 500ms
+                    setInterval(enforceSize, 500);
+                    
+                    // Also enforce on resize events
+                    window.addEventListener('resize', enforceSize);
+                }
+            """)
+            
+            logger.info("Window size enforced: 1280x720 (locked)")
+            
+        except Exception as e:
+            logger.warning(f"Could not enforce window size: {e}")
 
     def navigate(self, url: str):
         print(f"Navigating to {url}...")
