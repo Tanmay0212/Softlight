@@ -290,9 +290,13 @@ class BrowserActions:
                 # If fill() failed because it's not an input OR timed out (likely contenteditable), try contenteditable approach
                 if "not an <input>" in error_str or "not an <textarea>" in error_str or "Timeout" in error_str:
                     try:
-                        # CLICK first to focus, then type
-                        self.page.click(f'[data-bid="{bid}"]', timeout=2000)
+                        # CLICK first to focus, then type (increased timeout to 5s)
+                        self.page.click(f'[data-bid="{bid}"]', timeout=5000)
                         self.page.wait_for_timeout(500)  # Wait for focus
+                        
+                        # Clear any existing text
+                        self.page.keyboard.press('Meta+A' if self.page.evaluate('() => navigator.platform.includes("Mac")') else 'Control+A')
+                        self.page.keyboard.press('Backspace')
                         
                         # Type directly with keyboard
                         self.page.keyboard.type(text, delay=50)
@@ -329,8 +333,14 @@ class BrowserActions:
                     # Try click + type for placeholder fields too
                     if "Timeout" in error_msg or "not an <input>" in error_msg:
                         try:
-                            self.page.get_by_placeholder(element_info['placeholder']).first.click(timeout=2000)
+                            self.page.get_by_placeholder(element_info['placeholder']).first.click(timeout=5000)
                             self.page.wait_for_timeout(500)
+                            
+                            # Clear any existing text
+                            self.page.keyboard.press('Meta+A' if self.page.evaluate('() => navigator.platform.includes("Mac")') else 'Control+A')
+                            self.page.keyboard.press('Backspace')
+                            self.page.wait_for_timeout(200)
+                            
                             self.page.keyboard.type(text, delay=50)
                             self.page.wait_for_timeout(300)
                             logger.info("Typed by placeholder (click+type)", method="placeholder-click")
@@ -349,31 +359,93 @@ class BrowserActions:
             
             # Try contenteditable elements (divs, spans with contenteditable="true")
             if element_info.get('contenteditable'):
-                try:
-                    # Find by any available selector
-                    selector = None
-                    if element_info.get('id'):
-                        selector = f"#{element_info['id']}"
-                    elif element_info.get('data_testid'):
-                        selector = f"[data-testid='{element_info['data_testid']}']"
-                    elif bid:
-                        selector = f'[data-bid="{bid}"]'
-                    
-                    if selector:
-                        # Click to focus, then type
-                        self.page.click(selector, timeout=2000)
+                # Build list of possible selectors in priority order
+                selectors_to_try = []
+                
+                if element_info.get('placeholder'):
+                    selectors_to_try.append(('placeholder', f'[placeholder="{element_info["placeholder"]}"]'))
+                if element_info.get('aria_label'):
+                    selectors_to_try.append(('aria-label', f'[aria-label="{element_info["aria_label"]}"]'))
+                if element_info.get('id'):
+                    selectors_to_try.append(('id', f"#{element_info['id']}"))
+                if element_info.get('data_testid'):
+                    selectors_to_try.append(('data-testid', f"[data-testid='{element_info['data_testid']}']"))
+                if element_info.get('role'):
+                    selectors_to_try.append(('role', f'[role="{element_info["role"]}"]'))
+                if bid:
+                    selectors_to_try.append(('data-bid', f'[data-bid="{bid}"]'))
+                
+                # Try contenteditable with [contenteditable="true"] as additional selector
+                if element_info.get('tag'):
+                    selectors_to_try.append(('contenteditable', f'{element_info["tag"]}[contenteditable="true"]'))
+                
+                # Try each selector
+                for strategy_name, selector in selectors_to_try:
+                    try:
+                        # Click to focus with longer timeout (5s for dynamic modals)
+                        self.page.click(selector, timeout=5000)
                         self.page.wait_for_timeout(500)
+                        
+                        # Clear any existing text
+                        self.page.keyboard.press('Meta+A' if self.page.evaluate('() => navigator.platform.includes("Mac")') else 'Control+A')
+                        self.page.keyboard.press('Backspace')
+                        self.page.wait_for_timeout(200)
                         
                         # Type with delay
                         self.page.keyboard.type(text, delay=50)
                         self.page.wait_for_timeout(300)
                         
-                        logger.info("Typed into contenteditable", method="contenteditable")
-                        return {"success": True, "error": None, "method": "contenteditable"}
-                except Exception as e:
-                    errors.append(f"contenteditable: {str(e)[:50]}")
+                        logger.info(f"Typed into contenteditable by {strategy_name}", method=f"contenteditable-{strategy_name}")
+                        return {"success": True, "error": None, "method": f"contenteditable-{strategy_name}"}
+                    except Exception as e:
+                        errors.append(f"contenteditable-{strategy_name}: {str(e)[:50]}")
+                        continue
         
-        # Strategy 3: Fallback to coordinates (click then type)
+        # Strategy 2.5: AGGRESSIVE contenteditable fallback - try click+type even if element_info missing or unclear
+        # This handles cases where contenteditable wasn't detected or element_info is incomplete
+        if bid:
+            try:
+                logger.warning(f"Trying aggressive contenteditable approach for bid={bid}")
+                # Try to find ANY element with this bid and click it
+                self.page.locator(f'[data-bid="{bid}"]').first.click(timeout=5000)
+                self.page.wait_for_timeout(500)
+                
+                # Clear any existing text
+                self.page.keyboard.press('Meta+A' if self.page.evaluate('() => navigator.platform.includes("Mac")') else 'Control+A')
+                self.page.keyboard.press('Backspace')
+                self.page.wait_for_timeout(200)
+                
+                # Type the text
+                self.page.keyboard.type(text, delay=50)
+                self.page.wait_for_timeout(300)
+                
+                logger.info(f"Typed by aggressive contenteditable approach", method="contenteditable-aggressive")
+                return {"success": True, "error": None, "method": "contenteditable-aggressive"}
+            except Exception as e:
+                errors.append(f"contenteditable-aggressive: {str(e)[:50]}")
+        
+        # Strategy 3: Try to find contenteditable elements without knowing the bid
+        # Use generic selector to find first contenteditable in the modal/page
+        if not bid or "Timeout" in str(errors):
+            try:
+                logger.warning("Trying to find ANY contenteditable element")
+                # Find any contenteditable element that's visible
+                self.page.locator('[contenteditable="true"]').first.click(timeout=5000)
+                self.page.wait_for_timeout(500)
+                
+                # Clear and type
+                self.page.keyboard.press('Meta+A' if self.page.evaluate('() => navigator.platform.includes("Mac")') else 'Control+A')
+                self.page.keyboard.press('Backspace')
+                self.page.wait_for_timeout(200)
+                self.page.keyboard.type(text, delay=50)
+                self.page.wait_for_timeout(300)
+                
+                logger.info("Typed into first visible contenteditable", method="contenteditable-generic")
+                return {"success": True, "error": None, "method": "contenteditable-generic"}
+            except Exception as e:
+                errors.append(f"contenteditable-generic: {str(e)[:50]}")
+        
+        # Strategy 4: Fallback to coordinates (click then type)
         if x is not None and y is not None:
             result = self.type_text(text, x, y)
             if result["success"]:

@@ -103,7 +103,15 @@ class BrowserController:
     def navigate(self, url: str):
         print(f"Navigating to {url}...")
         self.page.goto(url, wait_until="domcontentloaded", timeout=60000)
-        self.page.wait_for_load_state('networkidle')
+        try:
+            # Try to wait for network idle, but don't fail if it takes too long
+            # Some apps (like Notion) have constant background activity
+            self.page.wait_for_load_state('networkidle', timeout=10000)
+        except Exception as e:
+            logger.warning(f"Network did not become idle within timeout, continuing anyway: {e}")
+            # Wait a bit for the page to stabilize
+            import time
+            time.sleep(2)
 
     def get_observation(self) -> (str, str):
         """Returns the base64 screenshot and the page's HTML content."""
