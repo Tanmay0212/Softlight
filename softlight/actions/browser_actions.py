@@ -287,20 +287,18 @@ class BrowserActions:
                 error_str = str(e)
                 errors.append(f"data-bid: {error_str[:50]}")
                 
-                # If fill() failed because it's not an input, try contenteditable approach
-                if "not an <input>" in error_str or "not an <textarea>" in error_str:
+                # If fill() failed because it's not an input OR timed out (likely contenteditable), try contenteditable approach
+                if "not an <input>" in error_str or "not an <textarea>" in error_str or "Timeout" in error_str:
                     try:
-                        # Click to focus, then type with keyboard
-                        self.page.click(f'[data-bid="{bid}"]', timeout=3000)
-                        self.page.wait_for_timeout(200)  # Wait for focus
+                        # CLICK first to focus, then type
+                        self.page.click(f'[data-bid="{bid}"]', timeout=2000)
+                        self.page.wait_for_timeout(500)  # Wait for focus
                         
-                        # Clear existing content first
-                        self.page.keyboard.press("Control+A")  # Select all
-                        self.page.keyboard.press("Backspace")  # Delete
-                        
-                        # Type new text
+                        # Type directly with keyboard
                         self.page.keyboard.type(text, delay=50)
-                        logger.info("Typed into contenteditable by data-bid", bid=bid, method="contenteditable-bid")
+                        self.page.wait_for_timeout(300)
+                        
+                        logger.info("Typed into contenteditable by click+type", bid=bid, method="contenteditable-bid")
                         return {"success": True, "error": None, "method": "contenteditable-bid"}
                     except Exception as e2:
                         errors.append(f"contenteditable-bid: {str(e2)[:50]}")
@@ -326,7 +324,19 @@ class BrowserActions:
                     logger.info("Typed by placeholder", method="placeholder")
                     return {"success": True, "error": None, "method": "placeholder"}
                 except Exception as e:
-                    errors.append(f"placeholder: {str(e)[:50]}")
+                    error_msg = str(e)
+                    errors.append(f"placeholder: {error_msg[:50]}")
+                    # Try click + type for placeholder fields too
+                    if "Timeout" in error_msg or "not an <input>" in error_msg:
+                        try:
+                            self.page.get_by_placeholder(element_info['placeholder']).first.click(timeout=2000)
+                            self.page.wait_for_timeout(500)
+                            self.page.keyboard.type(text, delay=50)
+                            self.page.wait_for_timeout(300)
+                            logger.info("Typed by placeholder (click+type)", method="placeholder-click")
+                            return {"success": True, "error": None, "method": "placeholder-click"}
+                        except Exception as e3:
+                            errors.append(f"placeholder-click: {str(e3)[:50]}")
             
             # Try name
             if element_info.get('name'):
@@ -350,11 +360,14 @@ class BrowserActions:
                         selector = f'[data-bid="{bid}"]'
                     
                     if selector:
-                        self.page.click(selector, timeout=3000)
-                        self.page.wait_for_timeout(200)
-                        self.page.keyboard.press("Control+A")
-                        self.page.keyboard.press("Backspace")
+                        # Click to focus, then type
+                        self.page.click(selector, timeout=2000)
+                        self.page.wait_for_timeout(500)
+                        
+                        # Type with delay
                         self.page.keyboard.type(text, delay=50)
+                        self.page.wait_for_timeout(300)
+                        
                         logger.info("Typed into contenteditable", method="contenteditable")
                         return {"success": True, "error": None, "method": "contenteditable"}
                 except Exception as e:

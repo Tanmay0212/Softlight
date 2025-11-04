@@ -80,10 +80,15 @@ if __name__ == "__main__":
     # app_name = "Linear"
     # use_profile = True  # Use existing Chrome profile with logged-in sessions
 
-    question = "create a new issue with name 'Bot issue 6'"
+    question = "create a new project with name 'Bot project 7'"
     url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
     app_name = "Linear"
     use_profile = True
+
+    # question = "add a description to bot issue 6 saying 'this is a test description'"
+    # url = "https://linear.app/softlight-assesment/issue/SOF-11/bot-issue-6"  # Update with your workspace
+    # app_name = "Linear"
+    # use_profile = True
 
     # question = "open bot issue 2 and change its priority to 'High'"
     # url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
