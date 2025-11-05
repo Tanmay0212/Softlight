@@ -1,4 +1,4 @@
-# 🌟 Softlight - Hybrid DOM + Vision UI Automation
+# 🌟 Softlight - Assessment
 
 AI-powered web automation that combines DOM selectors with vision-based coordinates for reliable, intelligent UI interaction.
 
