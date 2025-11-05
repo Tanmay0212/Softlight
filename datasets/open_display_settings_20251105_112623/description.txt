@@ -1,5 +1,115 @@
-This dataset is for task 1 : "open display settings and change from list to board view"
-Metadata.json : This file contains exact steps that were returned by Agent B to Agent A for executing the task.
-If you see we also have x,y coordinates since for this task we were in vision mode and Agent A was only working with coordinates to click on the screen.
+================================================================================
+TASK: Open display settings and change from list to board view
+================================================================================
 
-Followed by screenshots of each and every step that Agent A performed.
+APPLICATION: Linear
+MODE: Vision (Screenshot + Coordinates Only)
+URL: https://linear.app/softlight-assesment/team/SOF/active
+DURATION: 18.15 seconds
+COMPLETED: 2025-11-05 11:26:41
+
+--------------------------------------------------------------------------------
+WHAT HAPPENED
+--------------------------------------------------------------------------------
+
+This task demonstrates the system's VISION MODE where Agent B only receives 
+screenshots (no DOM) and provides coordinate-based actions. This mode is 
+useful for custom UI elements, icons, and visual controls.
+
+The system successfully:
+1. Identified and clicked the display settings icon at coordinates (1220, 60)
+2. Clicked the board view option at coordinates (1180, 120)
+
+--------------------------------------------------------------------------------
+STEP-BY-STEP EXECUTION
+--------------------------------------------------------------------------------
+
+Step 0: INITIAL STATE
+- Screenshot: step_0_initial.png
+- Agent B analyzed ONLY the screenshot (no DOM data)
+- Visually identified the display settings icon
+- Located its pixel coordinates
+
+Step 1: CLICK display settings icon
+- Action: CLICK at coordinates (1220, 60)
+- Reasoning: "Open display settings"
+- Method: Coordinate-based click (vision mode)
+- Screenshot: step_1_click_1220_60.png
+- Result: Display settings menu opened showing view options
+
+Step 2: CLICK board view option
+- Action: CLICK at coordinates (1180, 120)
+- Reasoning: "Switch to board view"
+- Method: Coordinate-based click (vision mode)
+- Screenshot: step_2_click_1180_120.png
+- Result: View changed from list to board layout
+
+Step 3: TASK COMPLETE
+- Reasoning: "View changed to board successfully"
+- Linear interface now displays issues in board view
+
+--------------------------------------------------------------------------------
+HOW VISION MODE WORKED
+--------------------------------------------------------------------------------
+
+📸 Screenshot-Only: Agent B received ONLY images, no DOM elements
+📍 Coordinate Output: All actions specified (x, y) pixel coordinates
+🎯 Visual Recognition: GPT-4o Vision identified UI elements from pixels
+⚡ Fast: Only 18 seconds for complete task
+
+Agent B (GPT-4o Vision) received:
+- Screenshot images only
+- No DOM, no text extraction, no element list
+- Pure visual analysis
+
+Agent A executed actions:
+- Used page.mouse.click(x, y) for coordinate clicks
+- No selector fallback available in vision mode
+- Direct pixel-position interactions
+
+--------------------------------------------------------------------------------
+VISION MODE vs HYBRID MODE
+--------------------------------------------------------------------------------
+
+VISION MODE (this task):
+✓ Works with ANY UI (canvas, icons, custom controls)
+✓ No DOM parsing needed
+✓ Good for visual-only elements (icons, images)
+✗ Less stable (layout changes break coordinates)
+✗ Slower reasoning (pure image analysis)
+
+HYBRID MODE (previous tasks):
+✓ More stable (DOM selectors don't break with layout changes)
+✓ Faster (direct element targeting)
+✓ Better for standard web apps
+✗ Requires accessible DOM
+
+When to use VISION MODE:
+- Custom UI controls without DOM
+- Icon-only interfaces
+- Canvas/SVG interactions
+- Shadow DOM components
+
+--------------------------------------------------------------------------------
+FILES IN THIS DATASET
+--------------------------------------------------------------------------------
+
+description.txt           - This file, explaining the task execution
+metadata.json            - Structured action history with coordinates
+step_0_initial.png       - Initial Linear list view
+step_1_click_1220_60.png - Display settings menu opened
+step_2_click_1180_120.png - Board view activated
+
+--------------------------------------------------------------------------------
+KEY INSIGHTS
+--------------------------------------------------------------------------------
+
+✓ Pure vision: Successfully completed task without any DOM information
+✓ Icon recognition: Identified display settings icon visually
+✓ Spatial reasoning: Located menu items by visual position
+✓ Very fast: 18 seconds due to simple 2-click workflow
+✓ Coordinate precision: Accurate clicks at (1220,60) and (1180,120)
+
+Note: Coordinates work on this specific screen resolution (1920x1080).
+If window size changes, coordinates may need recalculation (hybrid mode 
+doesn't have this issue).

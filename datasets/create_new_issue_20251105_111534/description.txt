@@ -1,4 +1,96 @@
-This dataset is for task 1 : "create a new issue and call it 'Test Issue 1'"
-Metadata.json : This file contains exact steps that were returned by Agent B to Agent A for executing the task.
+================================================================================
+TASK: Create a new issue and call it 'Test Issue 1'
+================================================================================
 
-Followed by screenshots of each and every step that Agent A performed.
+APPLICATION: Linear
+MODE: Hybrid (DOM + Vision)
+URL: https://linear.app/softlight-assesment/team/SOF/active
+DURATION: 40.81 seconds
+COMPLETED: 2025-11-05 11:16:15
+
+--------------------------------------------------------------------------------
+WHAT HAPPENED
+--------------------------------------------------------------------------------
+
+This task demonstrates the system's hybrid mode where Agent B (Instructor) 
+analyzed the page using DOM elements and screenshots, then Agent A (Executor) 
+used stable DOM selectors to interact with the UI.
+
+The system successfully created a new issue named "Test Issue 1" in Linear by:
+1. Identifying and clicking the "Create issue" button
+2. Typing the issue title in the input field
+3. Submitting the form to create the issue
+
+--------------------------------------------------------------------------------
+STEP-BY-STEP EXECUTION
+--------------------------------------------------------------------------------
+
+Step 0: INITIAL STATE
+- Screenshot: step_0_initial.png
+- Agent B analyzed the Linear dashboard
+- Extracted 100 DOM elements with semantic attributes
+- Identified actionable elements (buttons, inputs, links)
+
+Step 1: CLICK to create new issue
+- Action: CLICK on element with bid="3"
+- Reasoning: "Click to create a new issue"
+- Method: DOM selector (data-bid="3")
+- Screenshot: step_1_click_bid3.png
+- Result: Modal/form opened for creating a new issue
+
+Step 2: TYPE issue title
+- Action: TYPE "Test Issue 1" into element with bid="Issue title"
+- Reasoning: "Type issue name in the title field"
+- Method: DOM selector (placeholder="Issue title")
+- Screenshot: step_2_type_bidIssue title.png
+- Result: Issue title field populated with "Test Issue 1"
+
+Step 3: CLICK to submit
+- Action: CLICK on element with bid="36"
+- Reasoning: "Click 'Create issue' button to finalize the new issue creation"
+- Method: DOM selector (data-bid="36")
+- Screenshot: step_3_click_bid36.png
+- Result: Issue created successfully
+
+Step 4: TASK COMPLETE
+- Reasoning: "Task finished successfully"
+- The new issue "Test Issue 1" was created and is now visible in Linear
+
+--------------------------------------------------------------------------------
+HOW HYBRID MODE WORKED
+--------------------------------------------------------------------------------
+
+✅ DOM Extraction: System extracted interactive elements from HTML
+✅ Semantic Selectors: Used stable attributes (data-bid, placeholder, role)
+✅ No Coordinates: All actions used DOM selectors (more reliable)
+✅ Fast Execution: ~40 seconds for complete task
+
+Agent B (GPT-4o) received:
+- List of 100 DOM elements with attributes
+- Page text content
+- Screenshot for visual context
+
+Agent A executed actions using:
+- Priority 1: data-bid selectors (injected unique IDs)
+- Priority 2: Semantic attributes (placeholder, aria-label)
+- Fallback: Coordinates (not needed in this task)
+
+--------------------------------------------------------------------------------
+FILES IN THIS DATASET
+--------------------------------------------------------------------------------
+
+description.txt           - This file, explaining the task execution
+metadata.json            - Structured action history and task metadata
+step_0_initial.png       - Initial Linear dashboard
+step_1_click_bid3.png    - After clicking create button
+step_2_type_bidIssue title.png - After typing issue title
+step_3_click_bid36.png   - After creating the issue
+
+--------------------------------------------------------------------------------
+KEY INSIGHTS
+--------------------------------------------------------------------------------
+
+✓ All actions succeeded using DOM selectors (no coordinate fallback needed)
+✓ Hybrid mode provides stable, reliable automation
+✓ System understood natural language task and executed correctly
+✓ Each step was reasoned about by Agent B before execution

@@ -1,4 +1,96 @@
-This dataset is for task 1 : "open 'Test Issue 1' and add to bot project"
-Metadata.json : This file contains exact steps that were returned by Agent B to Agent A for executing the task.
+================================================================================
+TASK: Open 'Test Issue 1' and add to bot project
+================================================================================
 
-Followed by screenshots of each and every step that Agent A performed.
+APPLICATION: Linear
+MODE: Hybrid (DOM + Vision)
+URL: https://linear.app/softlight-assesment/team/SOF/active
+DURATION: 27.32 seconds
+COMPLETED: 2025-11-05 11:17:38
+
+--------------------------------------------------------------------------------
+WHAT HAPPENED
+--------------------------------------------------------------------------------
+
+This task demonstrates the system's ability to navigate through multi-step 
+workflows. The system located an existing issue by name, opened it, and 
+added it to a specific project using DOM-based navigation.
+
+The system successfully:
+1. Found and clicked on "Test Issue 1" from the issues list
+2. Clicked the project assignment button
+3. Selected "Bot Project" from the dropdown
+
+--------------------------------------------------------------------------------
+STEP-BY-STEP EXECUTION
+--------------------------------------------------------------------------------
+
+Step 0: INITIAL STATE
+- Screenshot: step_0_initial.png
+- Agent B analyzed the Linear issues dashboard
+- Scanned page text to locate "Test Issue 1"
+- Extracted DOM elements including clickable issue cards
+
+Step 1: CLICK to open issue
+- Action: CLICK on element with bid="44"
+- Reasoning: "Open 'Test Issue 1'"
+- Method: DOM selector (data-bid="44")
+- Screenshot: step_1_click_bid44.png
+- Result: Issue detail page opened for "Test Issue 1"
+
+Step 2: CLICK to assign project
+- Action: CLICK on element with bid="26"
+- Reasoning: "Add issue to project"
+- Method: DOM selector (data-bid="26")
+- Screenshot: step_2_click_bid26.png
+- Result: Project selection dropdown appeared
+
+Step 3: CLICK to select project
+- Action: CLICK on element with bid="41"
+- Reasoning: "Select 'Bot Project' from the project list"
+- Method: DOM selector (data-bid="41")
+- Screenshot: step_3_click_bid41.png
+- Result: Issue assigned to "Bot Project"
+
+Step 4: TASK COMPLETE
+- Reasoning: "Task finished successfully"
+- "Test Issue 1" is now part of "Bot Project"
+
+--------------------------------------------------------------------------------
+HOW HYBRID MODE WORKED
+--------------------------------------------------------------------------------
+
+✅ Text Search: Agent B used page text to find "Test Issue 1"
+✅ Context Understanding: Understood "bot project" refers to a project name
+✅ Multi-Step Navigation: Handled dropdown interaction automatically
+✅ Fast Execution: ~27 seconds for complete task
+
+Agent B (GPT-4o) received:
+- DOM elements with text content and attributes
+- Full page text (used to locate issue by name)
+- Screenshots showing visual layout
+
+Agent A executed actions:
+- All interactions used stable data-bid selectors
+- No coordinate fallback needed
+- Each action verified before proceeding
+
+--------------------------------------------------------------------------------
+FILES IN THIS DATASET
+--------------------------------------------------------------------------------
+
+description.txt           - This file, explaining the task execution
+metadata.json            - Structured action history and task metadata
+step_0_initial.png       - Initial issues list with "Test Issue 1"
+step_1_click_bid44.png   - Issue detail page opened
+step_2_click_bid26.png   - Project dropdown opened
+step_3_click_bid41.png   - "Bot Project" selected
+
+--------------------------------------------------------------------------------
+KEY INSIGHTS
+--------------------------------------------------------------------------------
+
+✓ Natural language understanding: "add to bot project" correctly interpreted
+✓ Text-based search: Found issue by name "Test Issue 1" in page content
+✓ Dropdown handling: Automatically handled multi-step selection
+✓ Context awareness: Knew to open issue first, then assign project
