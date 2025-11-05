@@ -150,6 +150,19 @@ class DOMExtractor:
             # Extract attributes
             attrs = element.attrs
             
+            # FIX 4: Extract parent and position information for unique selectors
+            parent_tag = None
+            position_in_parent = None
+            
+            try:
+                if element.parent and element.parent.name:
+                    parent_tag = element.parent.name
+                    # Calculate position among siblings of same tag
+                    siblings = [sib for sib in element.parent.children if hasattr(sib, 'name') and sib.name == tag_name]
+                    position_in_parent = siblings.index(element) + 1  # 1-based index
+            except Exception as e:
+                logger.debug(f"Could not extract position info: {e}")
+            
             # Build ElementInfo
             elem_info = ElementInfo(
                 bid=bid,
@@ -171,6 +184,8 @@ class DOMExtractor:
                 readonly=attrs.get('readonly') is not None,
                 contenteditable=attrs.get('contenteditable') == 'true',
                 selector=self._generate_selector(element, attrs),
+                position_in_parent=position_in_parent,
+                parent_tag=parent_tag,
             )
             
             return elem_info

@@ -68,43 +68,26 @@ if __name__ == "__main__":
     # Set mode: "vision" (screenshot only) or "hybrid" (DOM + vision)
     mode = "hybrid"  # Change to "vision" to test vision-only mode
     
-    #Example 1: Google Search (no login needed)
-    # question = "Search for Softlight on Google and click on the first result"
-    # url = "https://www.google.com/"
-    # app_name = "Google"
-    # use_profile = False
-    
-    # Example 2: Linear Tasks (requires login - use existing Chrome profile)
-    # question = "give me list of projects that I have"
+    # question = "create a new issue and call it 'Test Issue 1'"
     # url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
     # app_name = "Linear"
-    # use_profile = True  # Use existing Chrome profile with logged-in sessions
-
-    # question = "create a new to do list with name 'Bot to do list 7'"
-    # url = "https://www.notion.so/Getting-Started-29fc8da1472780019f00c0a2edae901a"  # Update with your workspace
-    # app_name = "Notion"
     # use_profile = True
 
-    # question = "add a description to issue 7 saying 'this is a test description' and close it"
-    # url = "https://linear.app/softlight-assesment/issue/SOF-11/bot-issue-6"  # Update with your workspace
+    # question = "open 'Test Issue 1' and add to bot project"
+    # url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
     # app_name = "Linear"
     # use_profile = True
 
-    # question = "create a new to do list and call it 'Bot to do list 7'"
-    # url = "https://www.notion.so/To-Do-List-29fc8da1472780279d1ee5bb4dd29a78"  # Update with your workspace
-    # app_name = "Notion"
+    # question = "open 'Test Issue 1' and add bug label to it"
+    # url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
+    # app_name = "Linear"
     # use_profile = True
 
-    question = "create new project and call it 'Bot project 8'"
+    question = "open display settings and change from list to board view"
     url = "https://linear.app/softlight-assesment/team/SOF/active"  # Update with your workspace
     app_name = "Linear"
     use_profile = True
     
-    # Example 3: Filter Issues in Linear
-    # question = "How do I filter issues by status in Linear?"
-    # url = "https://linear.app/test916/team/TES/active"
-    # app_name = "Linear"
-    # use_profile = True
     
     # =============================================================================
     # EXECUTION

@@ -189,9 +189,10 @@ def _inject_bids_into_dom(page: Page, elements: List[ElementInfo]):
     so we can use selectors like [data-bid="13"].
     
     Strategy:
-    1. Build a list of candidate selectors for each element
-    2. Try each selector in order of specificity
-    3. Set data-bid on the first matching element
+    1. Clear stale bids (selective - only disconnected/hidden elements)
+    2. Build a list of candidate selectors for each element
+    3. Try each selector in order of specificity
+    4. Set data-bid on the first matching element
     
     Args:
         page: Playwright Page object
@@ -200,20 +201,46 @@ def _inject_bids_into_dom(page: Page, elements: List[ElementInfo]):
     try:
         import json
         
+        # FIX 2: Selective bid clearing - remove only stale/removed elements
+        clear_stale_bids_script = """
+        (function() {
+            const existingBids = document.querySelectorAll('[data-bid]');
+            let removedCount = 0;
+            existingBids.forEach(elem => {
+                // Remove bid if element is disconnected or hidden (likely removed/replaced)
+                if (!elem.isConnected || elem.offsetParent === null) {
+                    elem.removeAttribute('data-bid');
+                    removedCount++;
+                }
+            });
+            return removedCount;
+        })();
+        """
+        
+        try:
+            removed_count = page.evaluate(clear_stale_bids_script)
+            if removed_count > 0:
+                logger.debug(f"Cleared {removed_count} stale data-bid attributes")
+        except Exception as e:
+            logger.debug(f"Could not clear stale bids: {e}")
+        
         # Build selector strategies for each element
         element_strategies = [_build_selector_strategies(elem) for elem in elements]
         
         # Convert to JSON for safe injection into JavaScript
         elements_json = json.dumps(element_strategies)
         
-        # Build JavaScript to inject all bids at once
+        # FIX 3: Enhanced injection with detailed logging
         js_script = f"""
         (function() {{
             const elements = {elements_json};
             
             let successCount = 0;
+            const failed = [];
+            
             for (const item of elements) {{
-                const {{ bid, selectors }} = item;
+                const {{ bid, selectors, elementInfo }} = item;
+                let matched = false;
                 
                 // Try each selector until one works
                 for (const selector of selectors) {{
@@ -222,6 +249,7 @@ def _inject_bids_into_dom(page: Page, elements: List[ElementInfo]):
                         if (elem && !elem.hasAttribute('data-bid')) {{
                             elem.setAttribute('data-bid', bid);
                             successCount++;
+                            matched = true;
                             break;  // Success, move to next element
                         }}
                     }} catch(e) {{
@@ -229,25 +257,131 @@ def _inject_bids_into_dom(page: Page, elements: List[ElementInfo]):
                         continue;
                     }}
                 }}
+                
+                if (!matched) {{
+                    failed.push({{
+                        bid: bid,
+                        tag: elementInfo?.tag,
+                        text: elementInfo?.text?.substring(0, 30),
+                        selectors: selectors
+                    }});
+                }}
             }}
             
-            return successCount;
+            return {{ successCount, failed }};
         }})();
         """
         
         # Execute injection
-        success_count = page.evaluate(js_script)
+        result = page.evaluate(js_script)
+        success_count = result.get('successCount', 0)
+        failed_items = result.get('failed', [])
         
-        logger.debug(f"Injected {success_count}/{len(elements)} data-bid attributes into DOM")
+        # FIX 3: Detailed logging
+        logger.info(
+            f"Bid injection: {success_count}/{len(elements)} successful",
+            success_rate=f"{success_count/len(elements)*100:.1f}%" if elements else "N/A"
+        )
+        
+        if failed_items:
+            failed_bids = [item['bid'] for item in failed_items[:5]]  # Log first 5
+            logger.warning(
+                f"Failed to inject {len(failed_items)} bids",
+                failed_bids=failed_bids,
+                examples=[{
+                    'bid': item['bid'],
+                    'tag': item['tag'],
+                    'text': item['text']
+                } for item in failed_items[:3]]
+            )
         
     except Exception as e:
         logger.warning(f"Failed to inject bids into DOM: {e}")
         # Non-critical failure - system will fall back to coordinate-based clicking
 
 
+def detect_dom_changes_and_reinject(page: Page, max_elements: int = 100) -> bool:
+    """
+    FIX 1: Detect DOM changes after CLICK actions and re-inject bids for new elements.
+    
+    This handles dynamic content (modals, dropdowns) that appear after initial bid injection.
+    
+    Strategy:
+    1. Wait up to 2 seconds for DOM mutations
+    2. Re-extract DOM to find new elements
+    3. Inject bids for newly appeared elements
+    
+    Args:
+        page: Playwright Page object
+        max_elements: Maximum elements to extract
+        
+    Returns:
+        True if DOM changed and bids were re-injected, False otherwise
+    """
+    try:
+        # Wait for potential DOM mutations (modals, dropdowns appearing)
+        # This uses Playwright's wait_for_function with a mutation observer
+        dom_changed = page.evaluate("""
+            () => {
+                return new Promise((resolve) => {
+                    const initialCount = document.querySelectorAll('*').length;
+                    let mutationOccurred = false;
+                    
+                    const observer = new MutationObserver((mutations) => {
+                        // Check if significant DOM changes occurred
+                        const currentCount = document.querySelectorAll('*').length;
+                        const changePercent = Math.abs(currentCount - initialCount) / initialCount;
+                        
+                        // If >5% of DOM changed, consider it significant
+                        if (changePercent > 0.05) {
+                            mutationOccurred = true;
+                            observer.disconnect();
+                            resolve(true);
+                        }
+                    });
+                    
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                    
+                    // Timeout after 2 seconds
+                    setTimeout(() => {
+                        observer.disconnect();
+                        resolve(mutationOccurred);
+                    }, 2000);
+                });
+            }
+        """)
+        
+        if dom_changed:
+            logger.info("DOM mutation detected - re-extracting and re-injecting bids")
+            
+            # Get updated HTML
+            html = page.content()
+            
+            # Re-extract elements
+            from softlight.domProcessor.dom_extractor import extract_dom_state
+            elements, _ = extract_dom_state(html, max_elements=max_elements)
+            
+            # Re-inject bids (will use selective clearing)
+            _inject_bids_into_dom(page, elements)
+            
+            return True
+        else:
+            logger.debug("No significant DOM mutations detected")
+            return False
+            
+    except Exception as e:
+        logger.warning(f"DOM change detection failed: {e}")
+        return False
+
+
 def _build_selector_strategies(elem: ElementInfo) -> dict:
     """
     Build a list of selector strategies for an element, in priority order.
+    
+    FIX 4: Enhanced with position-based selectors for improved uniqueness.
     
     Returns a dict with bid and list of selectors to try.
     
@@ -255,11 +389,11 @@ def _build_selector_strategies(elem: ElementInfo) -> dict:
         elem: ElementInfo object
         
     Returns:
-        {"bid": str, "selectors": [str]}
+        {"bid": str, "selectors": [str], "elementInfo": dict}
     """
     selectors = []
     
-    # Strategy 1: ID (most stable)
+    # Strategy 1: ID (most stable - unique by definition)
     if elem.id:
         selectors.append(f"#{elem.id}")
     
@@ -267,25 +401,47 @@ def _build_selector_strategies(elem: ElementInfo) -> dict:
     if elem.data_testid:
         selectors.append(f"[data-testid='{elem.data_testid}']")
     
-    # Strategy 3: name attribute
+    # FIX 4: Strategy 3: Compound selector with parent + name + position
+    if elem.name and elem.parent_tag and elem.position_in_parent:
+        selectors.append(f"{elem.parent_tag} > {elem.tag}[name='{elem.name}']:nth-child({elem.position_in_parent})")
+    
+    # Strategy 4: name attribute (basic)
     if elem.name:
         selectors.append(f"{elem.tag}[name='{elem.name}']")
     
-    # Strategy 4: aria-label (for buttons/links)
+    # FIX 4: Strategy 5: aria-label with position (for buttons/links)
     if elem.aria_label and elem.tag in ['button', 'a']:
-        # Escape quotes in aria-label
         safe_label = elem.aria_label.replace("'", "\\'")
+        
+        # Try with position first (more unique)
+        if elem.parent_tag and elem.position_in_parent:
+            selectors.append(f"{elem.parent_tag} > {elem.tag}[aria-label='{safe_label}']:nth-child({elem.position_in_parent})")
+        
+        # Then try without position
         selectors.append(f"{elem.tag}[aria-label='{safe_label}']")
     
-    # Strategy 5: Tag + type (for inputs)
-    if elem.tag == 'input' and elem.type:
-        selectors.append(f"input[type='{elem.type}']")
-        # If it has a placeholder, add that too
-        if elem.placeholder:
-            safe_placeholder = elem.placeholder.replace("'", "\\'")
+    # FIX 4: Strategy 6: Placeholder with position (for inputs)
+    if elem.placeholder:
+        safe_placeholder = elem.placeholder.replace("'", "\\'")
+        
+        # Compound: type + placeholder + position
+        if elem.type and elem.parent_tag and elem.position_in_parent:
+            selectors.append(f"{elem.parent_tag} > input[type='{elem.type}'][placeholder='{safe_placeholder}']:nth-child({elem.position_in_parent})")
+        
+        # Just type + placeholder
+        if elem.type:
             selectors.append(f"input[type='{elem.type}'][placeholder='{safe_placeholder}']")
     
-    # Strategy 6: href (for links)
+    # Strategy 7: Tag + type (for inputs - basic)
+    if elem.tag == 'input' and elem.type:
+        # With position
+        if elem.parent_tag and elem.position_in_parent:
+            selectors.append(f"{elem.parent_tag} > input[type='{elem.type}']:nth-child({elem.position_in_parent})")
+        
+        # Without position
+        selectors.append(f"input[type='{elem.type}']")
+    
+    # Strategy 8: href (for links)
     if elem.tag == 'a' and elem.href:
         safe_href = elem.href.replace("'", "\\'")
         selectors.append(f"a[href='{safe_href}']")
@@ -294,8 +450,15 @@ def _build_selector_strategies(elem: ElementInfo) -> dict:
     if elem.selector and elem.selector not in selectors:
         selectors.append(elem.selector)
     
+    # FIX 3: Include element info for detailed logging
     return {
         "bid": elem.bid,
-        "selectors": selectors
+        "selectors": selectors,
+        "elementInfo": {
+            "tag": elem.tag,
+            "text": elem.text[:50] if elem.text else None,
+            "aria_label": elem.aria_label,
+            "placeholder": elem.placeholder
+        }
     }
 

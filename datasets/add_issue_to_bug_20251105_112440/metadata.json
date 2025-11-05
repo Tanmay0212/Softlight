@@ -1,0 +1,44 @@
+{
+  "task_id": "open_test_issue_and_20251105_112440",
+  "question": "open 'Test Issue 1' and add bug label to it",
+  "url": "https://linear.app/softlight-assesment/team/SOF/active",
+  "app_name": "Linear",
+  "timestamp": "2025-11-05T11:25:16.748582",
+  "duration_seconds": 36.68,
+  "mode": "hybrid",
+  "max_elements": 100,
+  "action_history": [
+    {
+      "step": 1,
+      "action": "CLICK",
+      "bid": "44",
+      "x": null,
+      "y": null,
+      "reasoning": "Open 'Test Issue 1'"
+    },
+    {
+      "step": 2,
+      "action": "CLICK",
+      "bid": "25",
+      "x": null,
+      "y": null,
+      "reasoning": "Click 'Add label' to add a bug label"
+    },
+    {
+      "step": 3,
+      "action": "CLICK",
+      "bid": "99",
+      "x": null,
+      "y": null,
+      "reasoning": "Select 'Bug' label from suggestions"
+    },
+    {
+      "step": 4,
+      "action": "TASK_COMPLETE",
+      "bid": null,
+      "x": null,
+      "y": null,
+      "reasoning": "Bug label already added to 'Test Issue 1'"
+    }
+  ]
+}

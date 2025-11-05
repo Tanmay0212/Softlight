@@ -170,13 +170,32 @@ class HybridOrchestrator:
                 if result["success"]:
                     method = result.get("method", "unknown")
                     print(f"✅ {action_type} successful (method: {method})")
+                    
+                    # FIX 3: Enhanced logging with method tracking
                     logger.info(
                         "Action executed",
                         action=action_type,
                         method=method,
                         step=step,
-                        bid=action.get("bid")
+                        bid=action.get("bid"),
+                        fallback_used="data-bid" not in method
                     )
+                    
+                    # FIX 1: Check for DOM changes after CLICK actions (modals, dropdowns)
+                    if action_type == "CLICK":
+                        from softlight.state.page_state import detect_dom_changes_and_reinject
+                        
+                        print(f"   Checking for dynamic content...")
+                        dom_changed = detect_dom_changes_and_reinject(
+                            self.browser.page,
+                            max_elements=self.max_elements
+                        )
+                        
+                        if dom_changed:
+                            print(f"   ✅ New elements detected and bids injected")
+                            logger.info("Dynamic content handled", step=step)
+                            # Wait for re-injection to settle
+                            time.sleep(0.5)
                 else:
                     print(f"❌ {action_type} failed: {result['error']}")
                     logger.warning("Action failed", action=action_type, error=result['error'], step=step)

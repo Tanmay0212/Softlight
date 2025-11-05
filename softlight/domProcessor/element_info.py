@@ -51,6 +51,10 @@ class ElementInfo:
     selector: str = ""                # Generated stable selector
     xpath: Optional[str] = None       # XPath selector (optional)
     
+    # FIX 4: Position tracking for improved selector uniqueness
+    position_in_parent: Optional[int] = None  # nth-child index (1-based)
+    parent_tag: Optional[str] = None          # Parent element tag name
+    
     # Visual metadata (optional)
     bbox: Optional[Dict[str, float]] = None  # Bounding box {x, y, width, height}
     
@@ -76,6 +80,15 @@ class ElementInfo:
         
         # Collect key attributes
         attrs = []
+        
+        # Show contenteditable status (IMPORTANT for distinguishing multiple editable fields)
+        if self.contenteditable:
+            attrs.append("contenteditable")
+        
+        # Show role (helps GPT-4o understand element purpose)
+        if self.role:
+            attrs.append(f'role="{self.role}"')
+        
         if self.aria_label:
             attrs.append(f'aria-label="{self.aria_label}"')
         if self.placeholder:

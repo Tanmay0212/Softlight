@@ -1,0 +1,4 @@
+This dataset is for task 1 : "open 'Test Issue 1' and add bug label to it"
+Metadata.json : This file contains exact steps that were returned by Agent B to Agent A for executing the task.
+
+Followed by screenshots of each and every step that Agent A performed.

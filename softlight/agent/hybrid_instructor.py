@@ -123,11 +123,21 @@ TIPS:
 - Check if task complete before continuing
 - If no good DOM target exists, use coordinates
 
+MULTIPLE CONTENTEDITABLE FIELDS:
+When you see multiple contenteditable elements (e.g., in modals):
+- The FIRST/TOP field is usually for the PRIMARY name/title (required)
+- Fields with "description" or "summary" in placeholder are SECONDARY
+- Match the field purpose to your task:
+  * "Create project named X" → Type X in the TOP/name field (usually has text like "Project name")
+  * "Add description" → Type in the field with "description" placeholder
+- Look at element text content to identify which field is which
+
 LINEAR APP SPECIFICS:
 - Priority shown in right sidebar (bid will identify it)
 - Issue titles are links in main content
 - Top nav has workspace/search
 - Properties panel on right has Assign, Label, Priority buttons
+- New project/issue modals: TOP field = name/title, BOTTOM field = description
 
 RESPONSE FORMAT:
 Return ONLY the JSON action object. No explanation before or after.

@@ -1,0 +1,32 @@
+{
+  "task_id": "open_display_settings_and_20251105_112623",
+  "question": "open display settings and change from list to board view",
+  "url": "https://linear.app/softlight-assesment/team/SOF/active",
+  "app_name": "Linear",
+  "timestamp": "2025-11-05T11:26:41.622502",
+  "duration_seconds": 18.15,
+  "mode": "vision",
+  "action_history": [
+    {
+      "step": 1,
+      "action": "CLICK",
+      "x": 1220,
+      "y": 60,
+      "reasoning": "Open display settings"
+    },
+    {
+      "step": 2,
+      "action": "CLICK",
+      "x": 1180,
+      "y": 120,
+      "reasoning": "Switch to board view"
+    },
+    {
+      "step": 3,
+      "action": "TASK_COMPLETE",
+      "x": null,
+      "y": null,
+      "reasoning": "View changed to board successfully"
+    }
+  ]
+}
